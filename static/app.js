@@ -286,7 +286,7 @@ async function deleteDonor(phone, name) {
     }
 }
 
-// Emergency Matching Triggered on FIND MATCHING DONORS Button Click!
+// Emergency Matching with explicit encodeURIComponent for '+' in blood groups!
 async function matchEmergencyDonors() {
     const bg = document.getElementById('em-bg-select').value;
     const hospital = document.getElementById('em-hospital').value;
@@ -297,8 +297,10 @@ async function matchEmergencyDonors() {
     
     listDiv.innerHTML = `<div class="rc-card"><p class="text-muted">Searching database for compatible ${bg} donors...</p></div>`;
 
+    // CRITICAL FIX: encodeURIComponent for blood_group parameter so '+' is encoded as %2B instead of decoded as space ' '!
+    const query = new URLSearchParams({ blood_group: bg, hospital, urgency });
     try {
-        const res = await fetch(`/api/emergency?blood_group=${bg}&hospital=${encodeURIComponent(hospital)}&urgency=${urgency}`);
+        const res = await fetch(`/api/emergency?${query}`);
         const data = await res.json();
 
         currentEmergencyMatches = data.donors || [];
@@ -311,7 +313,6 @@ async function matchEmergencyDonors() {
             return;
         }
 
-        // Show REQUEST ALL button
         reqAllContainer.style.display = "block";
 
         data.donors.forEach(d => {
