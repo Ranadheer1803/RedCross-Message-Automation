@@ -10,20 +10,23 @@ def format_clean_phone(phone_str: str) -> str:
     if not phone_str:
         return ""
     digits = re.sub(r'\D', '', str(phone_str))
-    # If 10 digits, add country code 91 by default
     if len(digits) == 10:
         digits = "91" + digits
     return digits
 
 def generate_whatsapp_web_url(phone: str, message: str) -> str:
-    """Generate universal WhatsApp Web / App deep link."""
+    """Generate universal WhatsApp Web / App deep link with clean URL encoding."""
     clean_phone = format_clean_phone(phone)
+    if not clean_phone:
+        return "#"
     encoded_msg = urllib.parse.quote(message)
     return f"https://api.whatsapp.com/send?phone={clean_phone}&text={encoded_msg}"
 
 def generate_wa_me_link(phone: str, message: str) -> str:
     """Generate wa.me short link."""
     clean_phone = format_clean_phone(phone)
+    if not clean_phone:
+        return "#"
     encoded_msg = urllib.parse.quote(message)
     return f"https://wa.me/{clean_phone}?text={encoded_msg}"
 
@@ -34,9 +37,11 @@ def dispatch_pywhatkit_message(phone: str, message: str, wait_time: int = 15) ->
     try:
         import pywhatkit
         clean_phone = format_clean_phone(phone)
+        if not clean_phone:
+            return {"status": "error", "message": "Invalid or missing phone number"}
+            
         full_phone = f"+{clean_phone}" if not clean_phone.startswith("+") else clean_phone
         
-        # pywhatkit sendwhatmsg_instantly
         pywhatkit.sendwhatmsg_instantly(
             phone_no=full_phone,
             message=message,
@@ -55,8 +60,11 @@ def dispatch_twilio_whatsapp(phone: str, message: str, account_sid: str, auth_to
     try:
         import requests
         clean_phone = format_clean_phone(phone)
+        if not clean_phone:
+            return {"status": "error", "message": "Invalid recipient phone number"}
+            
         to_number = f"whatsapp:+{clean_phone}"
-        from_num = f"whatsapp:{from_number}" if not from_number.startswith("whatsapp:") else from_number
+        from_num = f"whatsapp:{from_number}" if not str(from_number).startswith("whatsapp:") else from_number
         
         url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
         data = {

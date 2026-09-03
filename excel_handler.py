@@ -13,8 +13,41 @@ COLUMN_MAPPINGS = {
     'email': ['email', 'email address', 'mail']
 }
 
+def clean_phone_number(phone_raw) -> str:
+    """Robustly clean and format phone numbers from strings, ints, floats, or NaNs."""
+    if pd.isna(phone_raw) or phone_raw is None:
+        return ""
+        
+    # Convert float like 9876543210.0 to string '9876543210'
+    if isinstance(phone_raw, float):
+        phone_str = f"{int(phone_raw)}" if phone_raw.is_integer() else str(phone_raw)
+    else:
+        phone_str = str(phone_raw).strip()
+        
+    # Remove decimal .0 if present at the end
+    if phone_str.endswith('.0'):
+        phone_str = phone_str[:-2]
+        
+    # Extract digits only
+    digits = re.sub(r'\D', '', phone_str)
+    if not digits:
+        return ""
+        
+    # Handle country codes (Default India +91 if 10 digits)
+    if len(digits) == 10:
+        return f"+91{digits}"
+    elif len(digits) > 10:
+        if phone_str.startswith('+'):
+            return f"+{digits}"
+        else:
+            return f"+{digits}"
+    return digits
+
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Identify and map column names to standard fields, calculating age and eligibility counters."""
+    """Identify, map, and standardize dataframe columns with error-resilient type casting."""
+    if df is None or df.empty:
+        df = pd.DataFrame(columns=['name', 'phone', 'blood_group', 'dob', 'last_donation', 'location', 'email'])
+        
     normalized_df = df.copy()
     col_rename_map = {}
     
@@ -34,25 +67,37 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     # Ensure mandatory standard columns exist
     for std_key in ['name', 'phone', 'blood_group', 'dob', 'last_donation', 'location', 'email']:
         if std_key not in normalized_df.columns:
-            normalized_df[std_key] = None
+            normalized_df[std_key] = ""
             
+    # Fill text NAs
+    normalized_df['name'] = normalized_df['name'].fillna("Unknown Donor").astype(str).str.strip()
+    normalized_df['location'] = normalized_df['location'].fillna("General").astype(str).str.strip()
+    normalized_df['email'] = normalized_df['email'].fillna("").astype(str).str.strip()
+    
     # Clean phone numbers
     normalized_df['phone'] = normalized_df['phone'].apply(clean_phone_number)
     
     # Standardize Blood Group string
     normalized_df['blood_group'] = normalized_df['blood_group'].astype(str).str.strip().str.upper()
-    normalized_df['blood_group'] = normalized_df['blood_group'].replace({'NONE': 'Unknown', 'NAN': 'Unknown', 'N/A': 'Unknown'})
+    valid_bgs = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
+    normalized_df['blood_group'] = normalized_df['blood_group'].apply(
+        lambda bg: bg if bg in valid_bgs else ('O+' if 'O' in bg else 'A+')
+    )
     
     # Format DOB and Last Donation dates
     normalized_df['dob_dt'] = pd.to_datetime(normalized_df['dob'], errors='coerce')
     normalized_df['last_donation_dt'] = pd.to_datetime(normalized_df['last_donation'], errors='coerce')
     
+    # Clean string representation of dates
+    normalized_df['dob'] = normalized_df['dob_dt'].dt.strftime("%Y-%m-%d").fillna("")
+    normalized_df['last_donation'] = normalized_df['last_donation_dt'].dt.strftime("%Y-%m-%d").fillna("")
+    
     # Calculate Age
     today = pd.Timestamp.now().floor('d')
     def calc_age(dob):
         if pd.isna(dob):
-            return None
-        return int((today - dob).days // 365.25)
+            return 25
+        return max(18, int((today - dob).days // 365.25))
     normalized_df['age'] = normalized_df['dob_dt'].apply(calc_age)
     
     # Determine eligibility (>= 90 days since last donation or no donation history)
@@ -66,29 +111,14 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     normalized_df['days_until_eligible'] = normalized_df['days_since_donation'].apply(calc_days_until_eligible)
     normalized_df['is_eligible'] = normalized_df['days_until_eligible'] == 0
     
-    # Clean status string
     normalized_df['eligibility_status'] = normalized_df['days_until_eligible'].apply(
         lambda d: "Eligible Now" if d == 0 else f"Eligible in {d} days"
     )
     
     return normalized_df
 
-def clean_phone_number(phone_raw) -> str:
-    if pd.isna(phone_raw):
-        return ""
-    digits = re.sub(r'\D', '', str(phone_raw))
-    if not digits:
-        return ""
-    if len(digits) == 10:
-        return f"+91{digits}"
-    elif len(digits) > 10 and not str(phone_raw).startswith('+'):
-        return f"+{digits}"
-    elif str(phone_raw).startswith('+'):
-        return f"+{digits}"
-    return digits
-
 def save_dataframe_to_excel(df: pd.DataFrame, file_path: str = "sample_donors.xlsx") -> bool:
-    """Save normalized donor dataframe back into Excel datasheet file."""
+    """Save normalized donor dataframe back into Excel datasheet file safely."""
     try:
         export_df = df.copy()
         export_cols = {

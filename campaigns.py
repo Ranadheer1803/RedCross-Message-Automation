@@ -1,5 +1,6 @@
 import pandas as pd
 import datetime
+import string
 
 SPECIAL_EVENTS = [
     {
@@ -47,9 +48,17 @@ DEFAULT_EMERGENCY_MESSAGE = (
 def get_days_until_event(month: int, day: int) -> int:
     """Calculate days remaining until specified month and day."""
     today = datetime.date.today()
-    event_date = datetime.date(today.year, month, day)
+    try:
+        event_date = datetime.date(today.year, month, day)
+    except ValueError:
+        event_date = datetime.date(today.year, 2, 28)
+        
     if event_date < today:
-        event_date = datetime.date(today.year + 1, month, day)
+        try:
+            event_date = datetime.date(today.year + 1, month, day)
+        except ValueError:
+            event_date = datetime.date(today.year + 1, 2, 28)
+            
     return (event_date - today).days
 
 def get_today_birthdays(df: pd.DataFrame) -> pd.DataFrame:
@@ -60,7 +69,7 @@ def get_today_birthdays(df: pd.DataFrame) -> pd.DataFrame:
     today = datetime.date.today()
     
     def is_birthday_today(dob):
-        if pd.isna(dob):
+        if pd.isna(dob) or not isinstance(dob, (pd.Timestamp, datetime.date, datetime.datetime)):
             return False
         return dob.month == today.month and dob.day == today.day
         
@@ -77,7 +86,7 @@ def get_upcoming_birthdays(df: pd.DataFrame, days: int = 7) -> pd.DataFrame:
     
     for idx, row in df.iterrows():
         dob = row['dob_dt']
-        if pd.isna(dob):
+        if pd.isna(dob) or not isinstance(dob, (pd.Timestamp, datetime.date, datetime.datetime)):
             continue
         try:
             bday_this_year = datetime.date(today.year, dob.month, dob.day)
@@ -98,10 +107,11 @@ def get_upcoming_birthdays(df: pd.DataFrame, days: int = 7) -> pd.DataFrame:
             
     return pd.DataFrame(upcoming_list)
 
-def format_message(template: str, donor_row: dict, extra_tags: dict = None) -> str:
-    """Format template message with donor properties and extra tags."""
-    msg = template
-    
+def format_message(template_str: str, donor_row: dict, extra_tags: dict = None) -> str:
+    """Safe template formatting resilient against missing keys or malformed tags."""
+    if not template_str:
+        return ""
+        
     tags = {
         'name': str(donor_row.get('name', 'Valued Donor')),
         'blood_group': str(donor_row.get('blood_group', 'Blood')),
@@ -109,13 +119,26 @@ def format_message(template: str, donor_row: dict, extra_tags: dict = None) -> s
         'location': str(donor_row.get('location', 'your area')),
         'dob': str(donor_row.get('dob', '')),
         'last_donation': str(donor_row.get('last_donation', 'N/A')),
-        'age': str(donor_row.get('age', 'N/A'))
+        'age': str(donor_row.get('age', 'N/A')),
+        'hospital': 'Red Cross Emergency Center',
+        'urgency': 'HIGH',
+        'contact_person': 'Red Cross Helpline'
     }
     
     if extra_tags:
         tags.update(extra_tags)
         
-    for key, val in tags.items():
-        msg = msg.replace(f"{{{key}}}", str(val))
-        
-    return msg
+    # Use string.Template for safe substitution
+    try:
+        # Convert {tag} format to $tag for Template class
+        safe_tpl = template_str
+        for k in tags.keys():
+            safe_tpl = safe_tpl.replace(f"{{{k}}}", f"${k}")
+        tpl = string.Template(safe_tpl)
+        return tpl.safe_substitute(tags)
+    except Exception:
+        # Fallback manual string replacement
+        result = template_str
+        for k, v in tags.items():
+            result = result.replace(f"{{{k}}}", str(v))
+        return result
