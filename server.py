@@ -19,6 +19,7 @@ from campaigns import (
     get_today_birthdays, get_upcoming_birthdays, format_message, get_days_until_event
 )
 from neo4j_handler import Neo4jManager
+from graph_engine import InMemGraphEngine
 
 app = FastAPI(title="RED CROSS WEST GODAVARI REST API", version="2.0")
 
@@ -32,17 +33,9 @@ app.add_middleware(
 
 ACTIVE_EXCEL_PATH = "sample_donors.xlsx"
 
-# Blood Compatibility Matrix: Which donor groups can give to Recipient X
-COMPATIBLE_DONORS_FOR_RECIPIENT = {
-    'O-': ['O-'],
-    'O+': ['O-', 'O+'],
-    'A-': ['O-', 'A-'],
-    'A+': ['O-', 'O+', 'A-', 'A+'],
-    'B-': ['O-', 'B-'],
-    'B+': ['O-', 'O+', 'B-', 'B+'],
-    'AB-': ['O-', 'A-', 'B-', 'AB-'],
-    'AB+': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']
-}
+# Initialize Local Graph Engine & Neo4j Manager
+graph_engine = InMemGraphEngine()
+neo4j_mgr = Neo4jManager()
 
 if not os.path.exists(ACTIVE_EXCEL_PATH):
     generate_sample_datasheet(ACTIVE_EXCEL_PATH)
@@ -50,10 +43,18 @@ if not os.path.exists(ACTIVE_EXCEL_PATH):
 def load_current_df() -> pd.DataFrame:
     if os.path.exists(ACTIVE_EXCEL_PATH):
         raw_df = pd.read_excel(ACTIVE_EXCEL_PATH)
-        return normalize_columns(raw_df)
+        norm_df = normalize_columns(raw_df)
+        
+        # Sync all donors into local graph database engine
+        graph_engine.clear()
+        for idx, row in norm_df.iterrows():
+            graph_engine.upsert_person(row.to_dict())
+            
+        return norm_df
     return normalize_columns(pd.DataFrame())
 
-neo4j_mgr = Neo4jManager()
+# Initial load
+load_current_df()
 
 os.makedirs("static", exist_ok=True)
 os.makedirs("assets", exist_ok=True)
@@ -102,7 +103,8 @@ def get_stats():
         "eligible_count": eligible_count,
         "birthdays_today": len(bday_df),
         "blood_inventory": bg_breakdown,
-        "neo4j": n_stats
+        "neo4j": n_stats,
+        "graph_node_count": len(graph_engine.person_nodes)
     }
 
 @app.get("/api/donors")
@@ -137,6 +139,9 @@ def add_donor(donor: DonorCreate):
     updated_df = pd.concat([df, new_row], ignore_index=True)
     save_dataframe_to_excel(updated_df, ACTIVE_EXCEL_PATH)
     
+    # Sync graph engine
+    graph_engine.upsert_person(new_row.iloc[0].to_dict())
+    
     neo4j_status = False
     if neo4j_mgr.connected:
         neo4j_status = neo4j_mgr.upsert_donor(new_row.iloc[0].to_dict())
@@ -163,6 +168,8 @@ def update_donor(phone: str, donor: DonorCreate):
     updated_df = normalize_columns(df)
     save_dataframe_to_excel(updated_df, ACTIVE_EXCEL_PATH)
     
+    graph_engine.upsert_person(updated_df.loc[idx].to_dict())
+    
     if neo4j_mgr.connected:
         neo4j_mgr.upsert_donor(updated_df.loc[idx].to_dict())
         
@@ -174,28 +181,26 @@ def delete_donor(phone: str):
     clean_p = clean_phone_number(phone)
     
     updated_df = delete_donor_by_phone(df, clean_p, ACTIVE_EXCEL_PATH)
+    graph_engine.delete_person(clean_p)
+    
     if neo4j_mgr.connected:
         neo4j_mgr.delete_donor(clean_p)
         
     return {"status": "success", "message": f"Deleted donor with phone {phone}"}
 
 @app.get("/api/emergency")
-def match_emergency(blood_group: str, hospital: Optional[str] = "GGH Eluru", urgency: Optional[str] = "HIGH", engine: Optional[str] = "AUTO"):
+def match_emergency(blood_group: str, hospital: Optional[str] = "GGH Eluru", urgency: Optional[str] = "HIGH"):
     clean_bg = blood_group.strip().upper()
-    valid_donor_bgs = COMPATIBLE_DONORS_FOR_RECIPIENT.get(clean_bg, [clean_bg])
     
-    # Automatically use Neo4j Graph Cypher Traversal if connected!
+    # 1. Primary Graph Traversal Query
     if neo4j_mgr.connected:
         matched = neo4j_mgr.get_compatible_donors_graph(clean_bg)
+        engine_type = "NEO4J_REMOTE_GRAPH"
     else:
-        df = load_current_df()
-        if df.empty:
-            matched = []
-        else:
-            df['clean_bg'] = df['blood_group'].astype(str).str.strip().str.upper()
-            matched_df = df[df['clean_bg'].isin(valid_donor_bgs)].copy()
-            matched = matched_df.to_dict(orient="records")
-            
+        # Fallback to local Cypher-equivalent Graph Traversal Engine
+        matched = graph_engine.query_compatible_donors(clean_bg)
+        engine_type = "NEO4J_LOCAL_GRAPH_ENGINE"
+        
     for donor in matched:
         msg = format_message(
             DEFAULT_EMERGENCY_MESSAGE,
@@ -207,11 +212,16 @@ def match_emergency(blood_group: str, hospital: Optional[str] = "GGH Eluru", urg
         
     return {
         "required_blood_group": clean_bg,
-        "compatible_groups": valid_donor_bgs,
-        "engine_used": "NEO4J_CYPHER" if neo4j_mgr.connected else "EXCEL_GRAPH_MATRIX",
+        "engine_used": engine_type,
         "count": len(matched),
         "donors": matched
     }
+
+@app.get("/api/neo4j/seed")
+def download_cypher_seed():
+    load_current_df()
+    cypher_file = graph_engine.generate_neo4j_cypher_seed_script("redcross_neo4j_seed.cypher")
+    return FileResponse(cypher_file, filename="redcross_neo4j_seed.cypher", media_type="text/plain")
 
 @app.get("/api/birthdays")
 def get_birthdays():
@@ -249,6 +259,8 @@ async def upload_excel(file: UploadFile = File(...)):
         
     df = normalize_columns(raw_df)
     save_dataframe_to_excel(df, ACTIVE_EXCEL_PATH)
+    
+    load_current_df()
     
     if neo4j_mgr.connected:
         neo4j_mgr.sync_dataframe(df)

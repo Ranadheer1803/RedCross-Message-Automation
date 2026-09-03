@@ -207,8 +207,8 @@ Red Cross West Godavari.</textarea>
         <section id="tab-neo4j" class="rc-tab-content">
             <div class="rc-grid-2">
                 <div class="rc-card">
-                    <h3>🌐 Neo4j Graph Database Configuration</h3>
-                    <p class="text-muted">Connect your local or AuraDB cloud Neo4j instance.</p>
+                    <h3>🌐 Neo4j Graph Database Connection</h3>
+                    <p class="text-muted">Connect your local Neo4j Desktop or Neo4j AuraDB (Cloud) instance.</p>
                     <div class="form-group">
                         <label>Neo4j Bolt URI</label>
                         <input type="text" id="neo-uri" value="bolt://localhost:7687" class="rc-input">
@@ -221,8 +221,13 @@ Red Cross West Godavari.</textarea>
                         <label>Password</label>
                         <input type="password" id="neo-pwd" value="password" class="rc-input">
                     </div>
-                    <button class="rc-btn rc-btn-red" onclick="connectNeo4j()">🔌 Connect & Sync Neo4j Graph</button>
+                    <button class="rc-btn rc-btn-red" onclick="connectNeo4j()">🔌 Connect & Sync Live Neo4j Server</button>
                     <div id="neo-status-msg" style="margin-top: 12px;"></div>
+
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #E2E8F0;">
+                    <h4>📜 Generate & Download Neo4j Cypher Database Script</h4>
+                    <p class="text-muted">Download the 1-click `.cypher` script to create your Neo4j database manually in Neo4j Browser.</p>
+                    <a href="/api/neo4j/seed" class="rc-btn rc-btn-outline" style="text-decoration: none;">📥 Download 1-Click Cypher Seed Script (.cypher)</a>
                 </div>
 
                 <div class="rc-card">
