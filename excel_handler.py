@@ -72,6 +72,30 @@ def clean_phone_number(phone_raw) -> str:
         return f"+{digits}"
     return digits
 
+def save_dataframe_to_excel(df: pd.DataFrame, file_path: str = "sample_donors.xlsx") -> bool:
+    """Save normalized donor dataframe back into Excel datasheet file."""
+    try:
+        # Create user-friendly column names for export
+        export_df = df.copy()
+        export_cols = {
+            'name': 'Full Name',
+            'phone': 'Mobile Number',
+            'blood_group': 'Blood Group',
+            'dob': 'Date of Birth',
+            'last_donation': 'Last Donation Date',
+            'location': 'Location',
+            'email': 'Email'
+        }
+        
+        cols_to_keep = [c for c in export_cols.keys() if c in export_df.columns]
+        export_df = export_df[cols_to_keep].rename(columns=export_cols)
+        
+        export_df.to_excel(file_path, index=False, engine='openpyxl')
+        return True
+    except Exception as e:
+        print(f"Error saving to Excel file {file_path}: {e}")
+        return False
+
 def generate_sample_datasheet(file_path: str = "sample_donors.xlsx") -> str:
     """Generate a sample Excel datasheet with realistic Red Cross donor records."""
     today = datetime.date.today()
