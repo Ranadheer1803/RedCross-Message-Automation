@@ -80,7 +80,7 @@ async function loadStats() {
         document.getElementById('metric-total').innerText = data.total_donors;
         document.getElementById('metric-eligible').innerText = data.eligible_count;
         document.getElementById('metric-birthdays').innerText = data.birthdays_today;
-        document.getElementById('metric-neo4j').innerText = data.neo4j.person_count || 0;
+        document.getElementById('metric-neo4j').innerText = data.graph_node_count || data.total_donors;
 
         const bgGrid = document.getElementById('bg-inventory-grid');
         bgGrid.innerHTML = '';
@@ -286,7 +286,7 @@ async function deleteDonor(phone, name) {
     }
 }
 
-// Emergency Matching with explicit encodeURIComponent for '+' in blood groups!
+// Emergency Matching
 async function matchEmergencyDonors() {
     const bg = document.getElementById('em-bg-select').value;
     const hospital = document.getElementById('em-hospital').value;
@@ -295,9 +295,8 @@ async function matchEmergencyDonors() {
     const listDiv = document.getElementById('em-matched-list');
     const reqAllContainer = document.getElementById('request-all-container');
     
-    listDiv.innerHTML = `<div class="rc-card"><p class="text-muted">Searching database for compatible ${bg} donors...</p></div>`;
+    listDiv.innerHTML = `<div class="rc-card"><p class="text-muted">Searching graph database for compatible ${bg} donors...</p></div>`;
 
-    // CRITICAL FIX: encodeURIComponent for blood_group parameter so '+' is encoded as %2B instead of decoded as space ' '!
     const query = new URLSearchParams({ blood_group: bg, hospital, urgency });
     try {
         const res = await fetch(`/api/emergency?${query}`);
@@ -419,31 +418,6 @@ async function loadEvents() {
         });
     } catch (e) {
         console.error("Error loading events:", e);
-    }
-}
-
-// Neo4j & File Upload Handlers
-async function connectNeo4j() {
-    const uri = document.getElementById('neo-uri').value;
-    const user = document.getElementById('neo-user').value;
-    const password = document.getElementById('neo-pwd').value;
-
-    const msgDiv = document.getElementById('neo-status-msg');
-    try {
-        const res = await fetch('/api/neo4j/connect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ uri, user, password })
-        });
-        const data = await res.json();
-        if (res.ok) {
-            msgDiv.innerHTML = `<span style="color: green; font-weight: bold;">🟢 ${data.message}</span>`;
-            loadStats();
-        } else {
-            msgDiv.innerHTML = `<span style="color: red;">🔴 ${data.message}</span>`;
-        }
-    } catch (e) {
-        msgDiv.innerHTML = `<span style="color: red;">🔴 Error connecting: ${e.message}</span>`;
     }
 }
 

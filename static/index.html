@@ -47,7 +47,7 @@
                 <div class="rc-card-value text-gold" id="metric-birthdays">0</div>
             </div>
             <div class="rc-card-metric">
-                <div class="rc-card-label">Neo4j Graph Nodes</div>
+                <div class="rc-card-label">Graph Database Nodes</div>
                 <div class="rc-card-value text-blue" id="metric-neo4j">0</div>
             </div>
         </div>
@@ -65,7 +65,7 @@
             <button class="rc-tab-btn active" onclick="switchTab('tab-registry')">🔍 Search & Add Member</button>
             <button class="rc-tab-btn" onclick="switchTab('tab-emergency')">🚨 Emergency Request</button>
             <button class="rc-tab-btn" onclick="switchTab('tab-campaigns')">🎂 Birthdays & Campaigns</button>
-            <button class="rc-tab-btn" onclick="switchTab('tab-neo4j')">🌐 Neo4j Graph & Settings</button>
+            <button class="rc-tab-btn" onclick="switchTab('tab-neo4j')">📂 Datasheet & Backup</button>
         </div>
 
         <!-- TAB 1: DONOR REGISTRY & SEARCH -->
@@ -203,40 +203,25 @@ Red Cross West Godavari.</textarea>
             </div>
         </section>
 
-        <!-- TAB 4: NEO4J & SETTINGS -->
+        <!-- TAB 4: DATASHEET & BACKUP -->
         <section id="tab-neo4j" class="rc-tab-content">
             <div class="rc-grid-2">
                 <div class="rc-card">
-                    <h3>🌐 Neo4j Graph Database Connection</h3>
-                    <p class="text-muted">Connect your local Neo4j Desktop or Neo4j AuraDB (Cloud) instance.</p>
-                    <div class="form-group">
-                        <label>Neo4j Bolt URI</label>
-                        <input type="text" id="neo-uri" value="bolt://localhost:7687" class="rc-input">
-                    </div>
-                    <div class="form-group">
-                        <label>Username</label>
-                        <input type="text" id="neo-user" value="neo4j" class="rc-input">
-                    </div>
-                    <div class="form-group">
-                        <label>Password</label>
-                        <input type="password" id="neo-pwd" value="password" class="rc-input">
-                    </div>
-                    <button class="rc-btn rc-btn-red" onclick="connectNeo4j()">🔌 Connect & Sync Live Neo4j Server</button>
-                    <div id="neo-status-msg" style="margin-top: 12px;"></div>
-
-                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #E2E8F0;">
-                    <h4>📜 Generate & Download Neo4j Cypher Database Script</h4>
-                    <p class="text-muted">Download the 1-click `.cypher` script to create your Neo4j database manually in Neo4j Browser.</p>
-                    <a href="/api/neo4j/seed" class="rc-btn rc-btn-outline" style="text-decoration: none;">📥 Download 1-Click Cypher Seed Script (.cypher)</a>
-                </div>
-
-                <div class="rc-card">
-                    <h3>📂 Upload Datasheet File</h3>
-                    <p class="text-muted">Upload an existing `.xlsx` or `.csv` donor file.</p>
+                    <h3>📂 Upload External Datasheet</h3>
+                    <p class="text-muted">Upload an existing Excel (`.xlsx`) or `.csv` donor datasheet file.</p>
                     <div class="form-group">
                         <input type="file" id="upload-file-input" accept=".xlsx, .xls, .csv" class="rc-input">
                     </div>
                     <button class="rc-btn rc-btn-dark" onclick="uploadExcelFile()">📤 Upload & Process Datasheet</button>
+                </div>
+
+                <div class="rc-card">
+                    <h3>📥 Download Registry Backup</h3>
+                    <p class="text-muted">Export your full donor database datasheet as Excel or Cypher Graph format.</p>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <a href="/api/excel/download" class="rc-btn rc-btn-red" style="text-decoration: none;">📥 Download Excel Datasheet (.xlsx)</a>
+                        <a href="/api/neo4j/seed" class="rc-btn rc-btn-outline" style="text-decoration: none;">📜 Export Cypher Graph File (.cypher)</a>
+                    </div>
                 </div>
             </div>
         </section>
