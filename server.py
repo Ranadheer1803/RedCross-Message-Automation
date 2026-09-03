@@ -32,7 +32,18 @@ app.add_middleware(
 
 ACTIVE_EXCEL_PATH = "sample_donors.xlsx"
 
-# Global State
+# Blood Compatibility Matrix: Which donor groups can give to Recipient X
+COMPATIBLE_DONORS_FOR_RECIPIENT = {
+    'O-': ['O-'],
+    'O+': ['O-', 'O+'],
+    'A-': ['O-', 'A-'],
+    'A+': ['O-', 'O+', 'A-', 'A+'],
+    'B-': ['O-', 'B-'],
+    'B+': ['O-', 'O+', 'B-', 'B+'],
+    'AB-': ['O-', 'A-', 'B-', 'AB-'],
+    'AB+': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']
+}
+
 if not os.path.exists(ACTIVE_EXCEL_PATH):
     generate_sample_datasheet(ACTIVE_EXCEL_PATH)
 
@@ -44,7 +55,6 @@ def load_current_df() -> pd.DataFrame:
 
 neo4j_mgr = Neo4jManager()
 
-# Mount Static & Assets Folders
 os.makedirs("static", exist_ok=True)
 os.makedirs("assets", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -54,7 +64,6 @@ app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 def read_root():
     return FileResponse("static/index.html")
 
-# Models
 class DonorCreate(BaseModel):
     name: str
     phone: str
@@ -69,7 +78,6 @@ class Neo4jConnectReq(BaseModel):
     user: str = "neo4j"
     password: str = "password"
 
-# API Endpoints
 @app.get("/api/stats")
 def get_stats():
     df = load_current_df()
@@ -79,9 +87,14 @@ def get_stats():
     
     all_bgs = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
     bg_breakdown = {}
-    for bg in all_bgs:
-        bg_breakdown[bg] = len(df[df['blood_group'] == bg]) if not df.empty else 0
-        
+    if not df.empty:
+        df['clean_bg'] = df['blood_group'].astype(str).str.strip().str.upper()
+        for bg in all_bgs:
+            bg_breakdown[bg] = len(df[df['clean_bg'] == bg])
+    else:
+        for bg in all_bgs:
+            bg_breakdown[bg] = 0
+            
     n_stats = neo4j_mgr.get_neo4j_stats()
     
     return {
@@ -106,7 +119,8 @@ def get_donors(search: Optional[str] = "", blood_group: Optional[str] = "ALL", e
             filtered['location'].astype(str).str.contains(search, case=False, na=False)
         ]
     if blood_group and blood_group != "ALL":
-        filtered = filtered[filtered['blood_group'] == blood_group]
+        filtered['clean_bg'] = filtered['blood_group'].astype(str).str.strip().str.upper()
+        filtered = filtered[filtered['clean_bg'] == blood_group.strip().upper()]
     if eligibility == "ELIGIBLE":
         filtered = filtered[filtered['is_eligible'] == True]
     elif eligibility == "INELIGIBLE":
@@ -167,7 +181,8 @@ def delete_donor(phone: str):
 
 @app.get("/api/emergency")
 def match_emergency(blood_group: str, hospital: Optional[str] = "GGH Eluru", urgency: Optional[str] = "HIGH", engine: Optional[str] = "EXCEL"):
-    clean_bg = blood_group.strip()
+    clean_bg = blood_group.strip().upper()
+    valid_donor_bgs = COMPATIBLE_DONORS_FOR_RECIPIENT.get(clean_bg, [clean_bg])
     
     if engine == "NEO4J" and neo4j_mgr.connected:
         matched = neo4j_mgr.get_compatible_donors_graph(clean_bg)
@@ -176,10 +191,10 @@ def match_emergency(blood_group: str, hospital: Optional[str] = "GGH Eluru", urg
         if df.empty:
             matched = []
         else:
-            matched_df = df[df['blood_group'] == clean_bg].copy()
+            df['clean_bg'] = df['blood_group'].astype(str).str.strip().str.upper()
+            matched_df = df[df['clean_bg'].isin(valid_donor_bgs)].copy()
             matched = matched_df.to_dict(orient="records")
             
-    # Add generated wa_url to each donor object
     for donor in matched:
         msg = format_message(
             DEFAULT_EMERGENCY_MESSAGE,
@@ -191,6 +206,7 @@ def match_emergency(blood_group: str, hospital: Optional[str] = "GGH Eluru", urg
         
     return {
         "required_blood_group": clean_bg,
+        "compatible_groups": valid_donor_bgs,
         "count": len(matched),
         "donors": matched
     }
