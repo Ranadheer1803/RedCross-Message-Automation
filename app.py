@@ -22,122 +22,157 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Red Cross CSS Design System
+# Custom Premium Red Cross Theme CSS (Light, Pristine, Editorial, Trustworthy)
 st.markdown("""
 <style>
+    /* Global Canvas */
     .stApp {
-        background: linear-gradient(135deg, #0B0F19 0%, #1A1C29 50%, #0F111A 100%);
-        color: #F8FAFC;
+        background-color: #F8F9FA;
+        color: #1E293B;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
     
-    .redcross-header {
-        background: linear-gradient(135deg, rgba(229, 57, 53, 0.15) 0%, rgba(198, 40, 40, 0.05) 100%);
-        border: 1px solid rgba(229, 57, 53, 0.35);
-        backdrop-filter: blur(16px);
+    /* Editorial Header Card */
+    .rc-editorial-header {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
         border-radius: 20px;
-        padding: 28px 36px;
+        padding: 32px 40px;
         margin-bottom: 28px;
-        box-shadow: 0 12px 40px rgba(229, 57, 53, 0.12);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
         display: flex;
         align-items: center;
-        gap: 24px;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
     }
     
-    .redcross-title-big {
-        font-size: 44px;
-        font-weight: 900;
-        color: #E53935;
-        letter-spacing: -1px;
-        line-height: 1.0;
-        text-shadow: 0 0 20px rgba(229, 57, 53, 0.4);
-    }
-    
-    .redcross-title-small {
-        font-size: 16px;
-        font-weight: 800;
-        color: #F8FAFC;
-        letter-spacing: 4px;
-        text-transform: uppercase;
-        margin-top: 4px;
+    .rc-editorial-header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 8px;
+        height: 100%;
+        background-color: #D32F2F;
     }
 
-    .redcross-subtitle {
-        color: #94A3B8;
-        font-size: 13px;
+    .rc-title-red {
+        font-size: 52px;
+        font-weight: 900;
+        color: #D32F2F;
+        letter-spacing: -1.5px;
+        line-height: 1.0;
+        margin: 0;
+    }
+
+    .rc-title-sub {
+        font-size: 18px;
+        font-weight: 800;
+        color: #1E293B;
+        letter-spacing: 4px;
+        text-transform: uppercase;
         margin-top: 6px;
     }
 
-    .rc-metric-card {
-        background: rgba(26, 28, 41, 0.75);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+    .rc-tagline {
+        color: #64748B;
+        font-size: 14px;
+        margin-top: 6px;
+        font-weight: 500;
+    }
+
+    .rc-values-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #FFEBEE;
+        color: #C62828;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+
+    /* Metric White Cards */
+    .rc-card-metric {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
         border-radius: 16px;
-        padding: 20px 24px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        padding: 22px 26px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+        transition: all 0.2s ease;
     }
     
-    .rc-metric-card:hover {
-        transform: translateY(-4px);
-        border-color: rgba(229, 57, 53, 0.5);
-        box-shadow: 0 8px 30px rgba(229, 57, 53, 0.2);
+    .rc-card-metric:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(211, 47, 47, 0.08);
+        border-color: #EF5350;
     }
     
-    .rc-metric-label {
+    .rc-card-label {
         font-size: 12px;
         font-weight: 700;
         text-transform: uppercase;
-        color: #94A3B8;
+        color: #64748B;
         letter-spacing: 1px;
     }
     
-    .rc-metric-value {
-        font-size: 36px;
+    .rc-card-value {
+        font-size: 38px;
         font-weight: 900;
-        color: #FFFFFF;
+        color: #0F172A;
         margin-top: 4px;
     }
 
-    .bg-badge-card {
-        background: rgba(229, 57, 53, 0.1);
-        border: 1px solid rgba(229, 57, 53, 0.25);
+    /* Blood Group Chips */
+    .rc-bg-chip {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
         border-radius: 14px;
         padding: 14px;
         text-align: center;
         transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
     }
-    .bg-badge-card:hover {
-        background: rgba(229, 57, 53, 0.25);
-        transform: scale(1.04);
+    .rc-bg-chip:hover {
+        border-color: #D32F2F;
+        transform: scale(1.03);
+        box-shadow: 0 4px 16px rgba(211, 47, 47, 0.12);
     }
-    .bg-badge-type {
+    .rc-bg-chip-type {
         font-size: 18px;
         font-weight: 900;
-        color: #EF5350;
+        color: #D32F2F;
     }
-    .bg-badge-count {
+    .rc-bg-chip-cnt {
         font-size: 22px;
         font-weight: 800;
-        color: #FFFFFF;
+        color: #1E293B;
     }
 
-    .donor-card {
-        background: rgba(30, 33, 48, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+    /* Donor Card Container */
+    .rc-donor-item {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
         border-radius: 16px;
-        padding: 20px;
+        padding: 22px 28px;
         margin-bottom: 16px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
         transition: all 0.2s ease;
     }
-    .donor-card:hover {
-        border-color: rgba(229, 57, 53, 0.4);
-        box-shadow: 0 8px 24px rgba(229, 57, 53, 0.15);
+    .rc-donor-item:hover {
+        border-color: #D32F2F;
+        box-shadow: 0 8px 28px rgba(211, 47, 47, 0.1);
     }
 
-    .wa-btn {
-        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    /* WhatsApp Button */
+    .rc-wa-button {
+        background-color: #D32F2F;
         color: #FFFFFF !important;
-        padding: 10px 20px;
+        padding: 10px 22px;
         border-radius: 10px;
         text-decoration: none;
         font-weight: 700;
@@ -145,40 +180,42 @@ st.markdown("""
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        box-shadow: 0 4px 16px rgba(37, 211, 102, 0.3);
+        box-shadow: 0 4px 14px rgba(211, 47, 47, 0.25);
         transition: all 0.2s ease;
     }
-    .wa-btn:hover {
+    .rc-wa-button:hover {
+        background-color: #B71C1C;
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(37, 211, 102, 0.5);
+        box-shadow: 0 6px 20px rgba(211, 47, 47, 0.35);
     }
 
+    /* Tabs Styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 12px;
-        background-color: rgba(15, 17, 26, 0.8);
-        padding: 10px;
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background-color: #FFFFFF;
+        padding: 8px;
+        border-radius: 14px;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
     }
 
     .stTabs [data-baseweb="tab"] {
         border-radius: 10px;
-        color: #94A3B8;
+        color: #64748B;
         font-weight: 700;
         padding: 12px 24px;
     }
 
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #E53935 0%, #C62828 100%) !important;
+        background-color: #D32F2F !important;
         color: #FFFFFF !important;
-        box-shadow: 0 4px 16px rgba(229, 57, 53, 0.4);
+        box-shadow: 0 4px 14px rgba(211, 47, 47, 0.3);
     }
 </style>
 """, unsafe_allow_html=True)
 
 ACTIVE_EXCEL_PATH = "sample_donors.xlsx"
 
-# Reset helper
 def wipe_all_databases():
     generate_sample_datasheet(ACTIVE_EXCEL_PATH)
     empty_df = pd.DataFrame(columns=['name', 'phone', 'blood_group', 'dob', 'last_donation', 'location', 'email'])
@@ -203,26 +240,34 @@ if 'custom_events' not in st.session_state:
 
 neo4j_mgr: Neo4jManager = st.session_state['neo4j']
 
-# Top Header with RED CROSS WEST GODAVARI branding
+# Top Editorial Header Component
 st.markdown("""
-<div class="redcross-header">
-    <div style="font-size: 56px; line-height: 1;">🩸</div>
+<div class="rc-editorial-header">
     <div>
-        <div class="redcross-title-big">RED CROSS</div>
-        <div class="redcross-title-small">WEST GODAVARI</div>
-        <div class="redcross-subtitle">Indian Red Cross Society — West Godavari District Branch | Smart Blood Donor Automation</div>
+        <div class="rc-values-pill">✚ Humanity • Trust • Compassion • Emergency Response</div>
+        <h1 class="rc-title-red" style="margin-top: 10px;">RED CROSS</h1>
+        <div class="rc-title-sub">WEST GODAVARI DISTRICT BRANCH</div>
+        <div class="rc-tagline">Indian Red Cross Society — Official Blood Donor Registry & Automated Messaging Dispatcher</div>
+    </div>
+    <div style="text-align: right; display: flex; align-items: center; gap: 16px;">
+        <div style="font-size: 64px; color: #D32F2F;">🩸</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar
+# Editorial Banner Image
+HERO_IMG_PATH = "assets/hero_image.jpg"
+if os.path.exists(HERO_IMG_PATH):
+    st.image(HERO_IMG_PATH, use_column_width=True)
+
+# Sidebar Design
 with st.sidebar:
-    st.image("https://img.icons8.com/color/96/red-cross.png", width=64)
-    st.markdown("### **RED CROSS WEST GODAVARI**")
-    st.caption("District Donor Automation Console")
+    st.image("https://img.icons8.com/color/96/red-cross.png", width=60)
+    st.markdown("## **RED CROSS**")
+    st.caption("WEST GODAVARI DISTRICT BRANCH")
     
     st.divider()
-    st.subheader("📋 Datasheet Controls")
+    st.subheader("📋 Datasheet Manager")
     
     uploaded_file = st.file_uploader("Upload Excel / CSV Datasheet", type=["xlsx", "xls", "csv"])
     if uploaded_file is not None:
@@ -250,7 +295,6 @@ with st.sidebar:
         st.rerun()
         
     st.divider()
-    
     st.subheader("💡 Export Datasheet")
     if os.path.exists(ACTIVE_EXCEL_PATH):
         with open(ACTIVE_EXCEL_PATH, "rb") as f:
@@ -262,7 +306,6 @@ with st.sidebar:
             )
             
     st.divider()
-    
     st.subheader("🌐 Neo4j Graph DB Connection")
     n_uri = st.text_input("Neo4j URI", value="bolt://localhost:7687")
     n_user = st.text_input("Username", value="neo4j")
@@ -304,55 +347,56 @@ with st.sidebar:
 
 df = st.session_state['df']
 
-# Top Interactive Metrics Row
+# Metric Grid
+st.markdown("<br>", unsafe_allow_html=True)
 m1, m2, m3, m4 = st.columns(4)
 with m1:
     st.markdown(f"""
-    <div class="rc-metric-card">
-        <div class="rc-metric-label">Total Registered Donors</div>
-        <div class="rc-metric-value">{len(df)}</div>
+    <div class="rc-card-metric">
+        <div class="rc-card-label">Total Registered Donors</div>
+        <div class="rc-card-value">{len(df)}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with m2:
     eligible_count = len(df[df['is_eligible'] == True]) if 'is_eligible' in df.columns else 0
     st.markdown(f"""
-    <div class="rc-metric-card">
-        <div class="rc-metric-label">Eligible Donors (≥90 Days)</div>
-        <div class="rc-metric-value" style="color: #4ADE80;">{eligible_count}</div>
+    <div class="rc-card-metric">
+        <div class="rc-card-label">Eligible Donors (≥90 Days)</div>
+        <div class="rc-card-value" style="color: #2E7D32;">{eligible_count}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with m3:
     bday_df = get_today_birthdays(df)
     st.markdown(f"""
-    <div class="rc-metric-card">
-        <div class="rc-metric-label">Birthdays Today</div>
-        <div class="rc-metric-value" style="color: #FACC15;">{len(bday_df)}</div>
+    <div class="rc-card-metric">
+        <div class="rc-card-label">Birthdays Today</div>
+        <div class="rc-card-value" style="color: #F57F17;">{len(bday_df)}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with m4:
     n_stats = neo4j_mgr.get_neo4j_stats()
     st.markdown(f"""
-    <div class="rc-metric-card">
-        <div class="rc-metric-label">Neo4j Graph Nodes</div>
-        <div class="rc-metric-value" style="color: #38BDF8;">{n_stats['person_count']}</div>
+    <div class="rc-card-metric">
+        <div class="rc-card-label">Neo4j Graph Nodes</div>
+        <div class="rc-card-value" style="color: #0284C7;">{n_stats['person_count']}</div>
     </div>
     """, unsafe_allow_html=True)
 
-# Blood Group Breakdown Grid
+# Blood Group Inventory Breakdown Grid
 st.markdown("<br>", unsafe_allow_html=True)
-st.markdown("##### 🩸 Blood Group Inventory Breakdown (West Godavari Branch)")
+st.markdown("##### 🩸 Blood Group Inventory (West Godavari Branch)")
 bg_cols = st.columns(8)
 all_groups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
 for i, bg_type in enumerate(all_groups):
     count = len(df[df['blood_group'] == bg_type]) if 'blood_group' in df.columns else 0
     with bg_cols[i]:
         st.markdown(f"""
-        <div class="bg-badge-card">
-            <div class="bg-badge-type">{bg_type}</div>
-            <div class="bg-badge-count">{count}</div>
+        <div class="rc-bg-chip">
+            <div class="rc-bg-chip-type">{bg_type}</div>
+            <div class="rc-bg-chip-cnt">{count}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -533,7 +577,7 @@ with tab2:
             if only_eligible:
                 match_df = match_df[match_df['is_eligible'] == True]
                 
-        st.markdown(f"**Found <span style='color:#F43F5E; font-size:22px;'>{len(match_df)}</span> donors who can donate to {clean_req_bg}**", unsafe_allow_html=True)
+        st.markdown(f"**Found <span style='color:#D32F2F; font-size:22px;'>{len(match_df)}</span> donors who can donate to {clean_req_bg}**", unsafe_allow_html=True)
 
     with col_e2:
         st.markdown("##### 📝 Message Template Editor")
@@ -599,7 +643,7 @@ with tab2:
                             })
                         st.success("Dispatched all messages via Twilio API!")
 
-        # Donor Cards View with 1-Click WhatsApp buttons
+        # Clean Editorial Donor Cards
         for idx, donor in match_df.iterrows():
             d_name = donor['name']
             d_phone = donor['phone']
@@ -616,17 +660,17 @@ with tab2:
             wa_url = generate_whatsapp_web_url(d_phone, donor_msg)
             
             st.markdown(f"""
-            <div class="donor-card">
+            <div class="rc-donor-item">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <div style="font-size: 20px; font-weight: 800; color: #FFFFFF;">👤 {d_name} <span style="font-size:14px; font-weight:600; color:#94A3B8;">(Age: {d_age})</span></div>
-                        <div style="font-size: 14px; color: #CBD5E1; margin-top: 4px;">
-                            🩸 Blood Group: <b style="color:#EF5350;">{d_bg}</b> | 📍 Location: <b>{d_loc}</b> | ⏳ Status: <code>{d_status}</code>
+                        <div style="font-size: 20px; font-weight: 800; color: #0F172A;">👤 {d_name} <span style="font-size:14px; font-weight:600; color:#64748B;">(Age: {d_age})</span></div>
+                        <div style="font-size: 14px; color: #475569; margin-top: 4px;">
+                            🩸 Blood Group: <b style="color:#D32F2F;">{d_bg}</b> | 📍 Location: <b>{d_loc}</b> | ⏳ Status: <code>{d_status}</code>
                         </div>
-                        <div style="font-size: 13px; color: #64748B; margin-top: 2px;">Phone: <code>{d_phone}</code></div>
+                        <div style="font-size: 13px; color: #94A3B8; margin-top: 2px;">Phone: <code>{d_phone}</code></div>
                     </div>
                     <div>
-                        <a href="{wa_url}" target="_blank" class="wa-btn">💬 Send WhatsApp Message</a>
+                        <a href="{wa_url}" target="_blank" class="rc-wa-button">💬 Send WhatsApp Message</a>
                     </div>
                 </div>
             </div>
@@ -651,12 +695,12 @@ with tab3:
                 b_wa_url = generate_whatsapp_web_url(donor['phone'], b_msg)
                 
                 st.markdown(f"""
-                <div style="background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.35); border-radius: 16px; padding: 20px; margin-bottom: 14px;">
-                    <div style="font-weight: 800; font-size: 20px; color: #FACC15;">🎈 {donor['name']}</div>
-                    <div style="font-size: 14px; color: #E2E8F0; margin: 6px 0;">
-                        Blood Group: <b style="color:#EF5350;">{donor['blood_group']}</b> | Phone: <code>{donor['phone']}</code> | Location: <b>{donor['location']}</b>
+                <div style="background: #FFF8E1; border: 1px solid #FFE082; border-radius: 16px; padding: 20px; margin-bottom: 14px;">
+                    <div style="font-weight: 800; font-size: 20px; color: #F57F17;">🎈 {donor['name']}</div>
+                    <div style="font-size: 14px; color: #424242; margin: 6px 0;">
+                        Blood Group: <b style="color:#D32F2F;">{donor['blood_group']}</b> | Phone: <code>{donor['phone']}</code> | Location: <b>{donor['location']}</b>
                     </div>
-                    <a href="{b_wa_url}" target="_blank" class="wa-btn" style="margin-top: 10px;">🎂 Send Birthday Wishes & Donor Encouragement</a>
+                    <a href="{b_wa_url}" target="_blank" class="rc-wa-button" style="margin-top: 10px;">🎂 Send Birthday Wishes & Donor Encouragement</a>
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -678,10 +722,10 @@ with tab3:
         days_rem = get_days_until_event(ev['month'], ev['day'])
         with ev_cols[i % len(ev_cols)]:
             st.markdown(f"""
-            <div style="background: rgba(30, 33, 48, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px; text-align: center;">
-                <div style="font-size: 12px; color: #94A3B8; font-weight: 700;">{ev['name']}</div>
-                <div style="font-size: 24px; font-weight: 900; color: #38BDF8; margin-top: 4px;">{days_rem} days</div>
-                <div style="font-size: 11px; color: #64748B;">({ev['date_str']})</div>
+            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 14px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                <div style="font-size: 12px; color: #64748B; font-weight: 700;">{ev['name']}</div>
+                <div style="font-size: 24px; font-weight: 900; color: #0284C7; margin-top: 4px;">{days_rem} days</div>
+                <div style="font-size: 11px; color: #94A3B8;">({ev['date_str']})</div>
             </div>
             """, unsafe_allow_html=True)
             
