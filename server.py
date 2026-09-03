@@ -9,13 +9,17 @@ import datetime
 import os
 import io
 import logging
+import requests
 import time
 
 from excel_handler import (
     normalize_columns, generate_sample_datasheet, save_dataframe_to_excel, 
     delete_donor_by_phone, clean_phone_number
 )
-from whatsapp_engine import generate_whatsapp_web_url, generate_wa_me_link, dispatch_pywhatkit_message, dispatch_twilio_whatsapp
+from whatsapp_engine import (
+    generate_whatsapp_web_url, generate_wa_me_link, dispatch_pywhatkit_message, 
+    dispatch_twilio_whatsapp, dispatch_whatsapp_web_js
+)
 from campaigns import (
     SPECIAL_EVENTS, DEFAULT_BIRTHDAY_MESSAGE, DEFAULT_EMERGENCY_MESSAGE,
     get_today_birthdays, get_upcoming_birthdays, format_message, get_days_until_event
@@ -24,7 +28,7 @@ from neo4j_handler import Neo4jManager
 from graph_engine import InMemGraphEngine
 from sequential_whatsapp_dispatcher import send_sequential_emergency_whatsapp
 
-app = FastAPI(title="RED CROSS WEST GODAVARI REST API — Neo4j Powered", version="3.0")
+app = FastAPI(title="RED CROSS WEST GODAVARI REST API — whatsapp-web.js Powered", version="3.5")
 
 app.add_middleware(
     CORSMiddleware,
@@ -102,13 +106,21 @@ def get_stats():
             
     n_stats = neo4j_mgr.get_neo4j_stats()
     
+    # Check WhatsApp Web.js status
+    wweb_status = {"ready": False}
+    try:
+        wweb_status = requests.get("http://localhost:3000/status", timeout=1).json()
+    except Exception:
+        pass
+    
     return {
         "total_donors": total_donors,
         "eligible_count": eligible_count,
         "birthdays_today": len(bday_df),
         "blood_inventory": bg_breakdown,
         "neo4j": n_stats,
-        "graph_node_count": n_stats['person_count'] if neo4j_mgr.connected else len(graph_engine.person_nodes)
+        "graph_node_count": n_stats['person_count'] if neo4j_mgr.connected else len(graph_engine.person_nodes),
+        "whatsapp_webjs": wweb_status
     }
 
 @app.get("/api/donors")
@@ -227,6 +239,7 @@ def auto_dispatch_emergency(req: AutoDispatchReq):
     else:
         matched = graph_engine.query_compatible_donors(clean_bg)
         
+    recipients = []
     for donor in matched:
         msg = format_message(
             DEFAULT_EMERGENCY_MESSAGE,
@@ -234,8 +247,23 @@ def auto_dispatch_emergency(req: AutoDispatchReq):
             extra_tags={'hospital': req.hospital, 'urgency': req.urgency, 'contact_person': 'Red Cross West Godavari (9876543210)'}
         )
         donor['wa_message'] = msg
+        recipients.append({
+            "phone": donor.get('phone', ''),
+            "name": donor.get('name', 'Donor'),
+            "message": msg
+        })
 
-    # Execute 1-by-1 sequential auto-send with ENTER key auto-press & single tab close!
+    # Try whatsapp-web.js client.sendMessage() API (0 tabs, 0 Enter key!)
+    try:
+        wweb_status = requests.get("http://localhost:3000/status", timeout=2).json()
+        if wweb_status.get("ready"):
+            logging.info("Routing emergency dispatch to whatsapp-web.js background engine...")
+            bulk_res = requests.post("http://localhost:3000/send-bulk", json={"recipients": recipients}, timeout=60).json()
+            return bulk_res
+    except Exception as e:
+        logging.info(f"whatsapp-web.js service fallback: {e}")
+
+    # Fallback to sequential dispatcher
     res = send_sequential_emergency_whatsapp(matched)
     return res
 

@@ -1,80 +1,62 @@
 import urllib.parse
-import re
-import datetime
-import logging
+import webbrowser
+import requests
 
-logging.basicConfig(level=logging.INFO)
-
-def format_clean_phone(phone_str: str) -> str:
-    """Ensure phone number has only digits without leading + for API URLs."""
-    if not phone_str:
-        return ""
-    digits = re.sub(r'\D', '', str(phone_str))
+def clean_phone_for_whatsapp(phone_raw: str) -> str:
+    digits = ''.join(c for c in str(phone_raw) if c.isdigit())
     if len(digits) == 10:
-        digits = "91" + digits
+        return f"91{digits}"
     return digits
 
-def generate_whatsapp_web_url(phone: str, message: str) -> str:
-    """Generate universal WhatsApp Web / App deep link with clean URL encoding."""
-    clean_phone = format_clean_phone(phone)
-    if not clean_phone:
-        return "#"
+def generate_whatsapp_web_url(phone_raw: str, message: str) -> str:
+    """Generate official WhatsApp Web API URL with pre-filled message text."""
+    phone_clean = clean_phone_for_whatsapp(phone_raw)
     encoded_msg = urllib.parse.quote(message)
-    return f"https://api.whatsapp.com/send?phone={clean_phone}&text={encoded_msg}"
+    return f"https://api.whatsapp.com/send?phone={phone_clean}&text={encoded_msg}"
 
-def generate_wa_me_link(phone: str, message: str) -> str:
-    """Generate wa.me short link."""
-    clean_phone = format_clean_phone(phone)
-    if not clean_phone:
-        return "#"
+def generate_wa_me_link(phone_raw: str, message: str) -> str:
+    """Generate short wa.me URL for quick mobile opening."""
+    phone_clean = clean_phone_for_whatsapp(phone_raw)
     encoded_msg = urllib.parse.quote(message)
-    return f"https://wa.me/{clean_phone}?text={encoded_msg}"
+    return f"https://wa.me/{phone_clean}?text={encoded_msg}"
 
-def dispatch_pywhatkit_message(phone: str, message: str, wait_time: int = 15) -> dict:
-    """
-    Attempt to send WhatsApp message instantly via pywhatkit / Web browser automation.
-    """
+def dispatch_whatsapp_web_js(phone_raw: str, message: str) -> dict:
+    """Send message via background Node.js whatsapp-web.js microservice on port 3000 (0-click API dispatch)."""
+    try:
+        url = "http://localhost:3000/send-message"
+        res = requests.post(url, json={"phone": phone_raw, "message": message}, timeout=10)
+        return res.json()
+    except Exception as e:
+        return {"status": "error", "message": f"whatsapp-web.js Node service offline: {e}"}
+
+def dispatch_pywhatkit_message(phone_raw: str, message: str) -> dict:
+    """Send message via PyWhatKit instant browser automation."""
     try:
         import pywhatkit
-        clean_phone = format_clean_phone(phone)
-        if not clean_phone:
-            return {"status": "error", "message": "Invalid or missing phone number"}
-            
-        full_phone = f"+{clean_phone}" if not clean_phone.startswith("+") else clean_phone
-        
-        pywhatkit.sendwhatmsg_instantly(
-            phone_no=full_phone,
-            message=message,
-            wait_time=wait_time,
-            tab_close=True,
-            close_time=3
-        )
-        return {"status": "success", "message": f"Dispatched message to {full_phone}"}
+        phone_clean = clean_phone_for_whatsapp(phone_raw)
+        formatted_phone = f"+{phone_clean}"
+        pywhatkit.sendwhatmsg_instantly(formatted_phone, message, wait_time=8, tab_close=True, close_time=3)
+        return {"status": "success", "message": f"PyWhatKit message dispatched to {formatted_phone}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-def dispatch_twilio_whatsapp(phone: str, message: str, account_sid: str, auth_token: str, from_number: str) -> dict:
-    """
-    Send official WhatsApp message using Twilio API (if configured).
-    """
+def dispatch_twilio_whatsapp(phone_raw: str, message: str, account_sid: str, auth_token: str, from_number: str) -> dict:
+    """Send WhatsApp message using Twilio WhatsApp API."""
     try:
-        import requests
-        clean_phone = format_clean_phone(phone)
-        if not clean_phone:
-            return {"status": "error", "message": "Invalid recipient phone number"}
+        phone_clean = clean_phone_for_whatsapp(phone_raw)
+        to_number = f"whatsapp:+{phone_clean}"
+        if not from_number.startswith("whatsapp:"):
+            from_number = f"whatsapp:{from_number}"
             
-        to_number = f"whatsapp:+{clean_phone}"
-        from_num = f"whatsapp:{from_number}" if not str(from_number).startswith("whatsapp:") else from_number
-        
         url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
-        data = {
-            "From": from_num,
-            "To": to_number,
-            "Body": message
+        payload = {
+            'From': from_number,
+            'To': to_number,
+            'Body': message
         }
-        response = requests.post(url, data=data, auth=(account_sid, auth_token))
+        response = requests.post(url, data=payload, auth=(account_sid, auth_token))
         if response.status_code in [200, 201]:
-            return {"status": "success", "response": response.json()}
+            return {"status": "success", "data": response.json()}
         else:
             return {"status": "error", "message": response.text}
     except Exception as e:
