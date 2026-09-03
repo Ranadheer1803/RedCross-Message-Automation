@@ -1,5 +1,7 @@
 // RED CROSS WEST GODAVARI - Frontend Application JavaScript
 
+let currentEmergencyMatches = [];
+
 document.addEventListener("DOMContentLoaded", () => {
     initDateDropdowns();
     loadStats();
@@ -66,7 +68,6 @@ function switchTab(tabId) {
     document.getElementById(tabId).classList.add('active');
 
     if (tabId === 'tab-registry') loadDonors();
-    if (tabId === 'tab-emergency') matchEmergencyDonors();
     if (tabId === 'tab-campaigns') loadBirthdays();
 }
 
@@ -99,7 +100,7 @@ async function loadStats() {
     }
 }
 
-// Search & Load Donors (Only displays when search or filter is active!)
+// Search & Load Donors
 async function loadDonors() {
     const search = document.getElementById('search-input').value.trim();
     const bg = document.getElementById('filter-bg').value;
@@ -108,7 +109,6 @@ async function loadDonors() {
     const cardsContainer = document.getElementById('donors-cards-container');
     const resultsTitle = document.getElementById('search-results-title');
 
-    // If search is completely empty and no filters selected, don't show full list clutter
     if (!search && bg === 'ALL' && eligibility === 'ALL') {
         resultsTitle.style.display = "none";
         cardsContainer.innerHTML = `
@@ -167,13 +167,12 @@ async function loadDonors() {
     }
 }
 
-// Modal Form Handlers with Year/Month/Day Support
+// Modal Form Handlers
 function openAddModal() {
     document.getElementById('modal-title').innerText = "➕ Add Member Record";
     document.getElementById('donor-form').reset();
     document.getElementById('edit-original-phone').value = "";
     
-    // Set default years
     document.getElementById('dob-year').value = "1998";
     document.getElementById('dob-month').value = "05";
     document.getElementById('dob-day').value = "15";
@@ -199,7 +198,6 @@ async function openEditModal(phone) {
             document.getElementById('form-bg').value = d.blood_group;
             document.getElementById('form-location').value = d.location || "Eluru, West Godavari";
             
-            // Set DOB dropdowns if available
             if (d.dob && d.dob.includes('-')) {
                 const parts = d.dob.split('-');
                 document.getElementById('dob-year').value = parts[0];
@@ -207,7 +205,6 @@ async function openEditModal(phone) {
                 document.getElementById('dob-day').value = parts[2];
             }
             
-            // Set Last Donation dropdowns if available
             if (d.last_donation && d.last_donation.includes('-')) {
                 const parts = d.last_donation.split('-');
                 document.getElementById('last-year').value = parts[0];
@@ -230,13 +227,11 @@ async function handleFormSubmit(e) {
     e.preventDefault();
     const originalPhone = document.getElementById('edit-original-phone').value;
     
-    // Construct DOB string YYYY-MM-DD from dropdowns
     const dobY = document.getElementById('dob-year').value;
     const dobM = document.getElementById('dob-month').value;
     const dobD = document.getElementById('dob-day').value;
     const dobStr = (dobY && dobM && dobD) ? `${dobY}-${dobM}-${dobD}` : "";
 
-    // Construct Last Donation string YYYY-MM-DD from dropdowns
     const lastY = document.getElementById('last-year').value;
     const lastM = document.getElementById('last-month').value;
     const lastD = document.getElementById('last-day').value;
@@ -271,7 +266,6 @@ async function handleFormSubmit(e) {
         if (res.ok) {
             closeModal();
             loadStats();
-            // Automatically focus and search for newly added/edited donor name
             document.getElementById('search-input').value = donorData.name;
             loadDonors();
         }
@@ -292,33 +286,43 @@ async function deleteDonor(phone, name) {
     }
 }
 
-// Match Emergency Donors
+// Emergency Matching Triggered on FIND MATCHING DONORS Button Click!
 async function matchEmergencyDonors() {
     const bg = document.getElementById('em-bg-select').value;
     const hospital = document.getElementById('em-hospital').value;
     const urgency = document.getElementById('em-urgency').value;
 
+    const listDiv = document.getElementById('em-matched-list');
+    const reqAllContainer = document.getElementById('request-all-container');
+    
+    listDiv.innerHTML = `<div class="rc-card"><p class="text-muted">Searching database for compatible ${bg} donors...</p></div>`;
+
     try {
         const res = await fetch(`/api/emergency?blood_group=${bg}&hospital=${encodeURIComponent(hospital)}&urgency=${urgency}`);
         const data = await res.json();
 
+        currentEmergencyMatches = data.donors || [];
         document.getElementById('em-matched-count').innerText = data.count;
-        const listDiv = document.getElementById('em-matched-list');
         listDiv.innerHTML = '';
 
         if (!data.donors || data.donors.length === 0) {
-            listDiv.innerHTML = `<div class="rc-card"><p class="text-muted">No matching donors registered for blood group ${bg}.</p></div>`;
+            reqAllContainer.style.display = "none";
+            listDiv.innerHTML = `<div class="rc-card" style="text-align: center; padding: 32px;"><p class="text-muted">No matching donors registered for blood group ${bg}.</p></div>`;
             return;
         }
+
+        // Show REQUEST ALL button
+        reqAllContainer.style.display = "block";
 
         data.donors.forEach(d => {
             listDiv.innerHTML += `
                 <div class="rc-donor-item" style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <div style="font-size: 18px; font-weight: 800;">👤 ${d.name} <span style="color: #64748B; font-size: 13px;">(Age: ${d.age || 'N/A'})</span></div>
+                        <div style="font-size: 18px; font-weight: 800; color: #0F172A;">👤 ${d.name} <span style="font-size: 13px; color: #64748B;">(Age: ${d.age || 'N/A'})</span></div>
                         <div style="font-size: 13px; color: #475569; margin-top: 4px;">
                             🩸 Blood Group: <b style="color: #D32F2F;">${d.blood_group}</b> | 📍 Location: <b>${d.location || 'General'}</b> | ⏳ Status: <code>${d.eligibility_status || 'Eligible'}</code>
                         </div>
+                        <div style="font-size: 13px; color: #94A3B8; margin-top: 2px;">Phone: <code>${d.phone}</code></div>
                     </div>
                     <div>
                         <a href="${d.wa_url}" target="_blank" class="rc-wa-button">💬 Send WhatsApp Message</a>
@@ -329,6 +333,36 @@ async function matchEmergencyDonors() {
     } catch (e) {
         console.error("Error matching emergency donors:", e);
     }
+}
+
+// REQUEST ALL (Broadcast to Everyone on WhatsApp)
+function requestAllEmergencyWhatsApp() {
+    if (!currentEmergencyMatches || currentEmergencyMatches.length === 0) {
+        alert("No matched donors available to notify.");
+        return;
+    }
+
+    const broadcastList = document.getElementById('broadcast-list');
+    broadcastList.innerHTML = '';
+
+    currentEmergencyMatches.forEach(d => {
+        broadcastList.innerHTML += `
+            <div class="rc-donor-item" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; margin-bottom: 10px;">
+                <div>
+                    <b>👤 ${d.name}</b> (${d.blood_group}) - <code>${d.phone}</code>
+                </div>
+                <div>
+                    <a href="${d.wa_url}" target="_blank" class="rc-wa-button" style="padding: 6px 14px; font-size: 12px;">💬 Notify on WhatsApp</a>
+                </div>
+            </div>
+        `;
+    });
+
+    document.getElementById('broadcast-modal').classList.add('active');
+}
+
+function closeBroadcastModal() {
+    document.getElementById('broadcast-modal').classList.remove('active');
 }
 
 // Load Birthdays & Campaigns

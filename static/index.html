@@ -114,11 +114,11 @@
             <div class="rc-grid-2">
                 <div class="rc-card">
                     <h3>🎯 Emergency Recipient Blood Search</h3>
-                    <p class="text-muted">Select required blood group to match compatible registered donors.</p>
+                    <p class="text-muted">Select required blood group and criteria, then click <b>FIND MATCHING DONORS</b>.</p>
                     
                     <div class="form-group">
-                        <label>Required Blood Group</label>
-                        <select id="em-bg-select" class="rc-select" onchange="matchEmergencyDonors()">
+                        <label>Required Blood Group *</label>
+                        <select id="em-bg-select" class="rc-select">
                             <option value="O-">O- (Universal Donor)</option>
                             <option value="O+">O+</option>
                             <option value="A+">A+</option>
@@ -132,23 +132,27 @@
 
                     <div class="form-group">
                         <label>Hospital / Location Name</label>
-                        <input type="text" id="em-hospital" value="Government General Hospital, Eluru" class="rc-input" onkeyup="matchEmergencyDonors()">
+                        <input type="text" id="em-hospital" value="Government General Hospital, Eluru" class="rc-input">
                     </div>
 
                     <div class="form-group">
                         <label>Urgency Level</label>
-                        <select id="em-urgency" class="rc-select" onchange="matchEmergencyDonors()">
+                        <select id="em-urgency" class="rc-select">
                             <option value="CRITICAL">🔥 CRITICAL</option>
                             <option value="HIGH" selected>HIGH</option>
                             <option value="NORMAL">NORMAL</option>
                         </select>
                     </div>
+
+                    <button class="rc-btn rc-btn-red" style="width: 100%; justify-content: center; margin-top: 10px;" onclick="matchEmergencyDonors()">
+                        🔍 FIND MATCHING DONORS
+                    </button>
                 </div>
 
                 <div class="rc-card">
                     <h3>💬 Emergency WhatsApp Message Preview</h3>
                     <p class="text-muted">Custom message template sent to matching donors.</p>
-                    <textarea id="em-msg-template" class="rc-textarea" rows="7" onkeyup="matchEmergencyDonors()">🚨 URGENT BLOOD NEEDED! 🩸
+                    <textarea id="em-msg-template" class="rc-textarea" rows="7">🚨 URGENT BLOOD NEEDED! 🩸
 Dear {name}, an urgent requirement for {blood_group} blood has been reported at {hospital} ({location}).
 Urgency Level: {urgency}.
 If available, please contact: {contact_person}.
@@ -156,11 +160,21 @@ Red Cross West Godavari.</textarea>
                 </div>
             </div>
 
-            <div class="rc-section-title">
-                <h3>Matched Compatible Donors (<span id="em-matched-count" class="text-red">0</span>)</h3>
+            <div class="rc-toolbar" style="margin-top: 32px; margin-bottom: 16px;">
+                <div class="rc-toolbar-left">
+                    <h3 style="font-size: 20px; font-weight: 800;">Matched Compatible Donors (<span id="em-matched-count" class="text-red">0</span>)</h3>
+                </div>
+                <div class="rc-toolbar-right" id="request-all-container" style="display: none;">
+                    <button class="rc-btn rc-btn-red" style="font-size: 15px; padding: 12px 24px;" onclick="requestAllEmergencyWhatsApp()">
+                        🚀 REQUEST ALL (BROADCAST TO EVERYONE ON WHATSAPP)
+                    </button>
+                </div>
             </div>
+
             <div id="em-matched-list">
-                <!-- Rendered by JS -->
+                <div class="rc-card" style="text-align: center; padding: 36px;">
+                    <p class="text-muted">Select blood group criteria above and click <b>FIND MATCHING DONORS</b> to search.</p>
+                </div>
             </div>
         </section>
 
@@ -224,7 +238,7 @@ Red Cross West Godavari.</textarea>
 
     </main>
 
-    <!-- Modal Form for Adding/Editing Donors with Year/Month/Day Selector -->
+    <!-- Modal Form for Adding/Editing Donors -->
     <div class="rc-modal-overlay" id="donor-modal">
         <div class="rc-modal">
             <div class="rc-modal-header">
@@ -256,7 +270,6 @@ Red Cross West Godavari.</textarea>
                         </select>
                     </div>
 
-                    <!-- Instant Year / Month / Day Selector for Date of Birth -->
                     <div class="form-group">
                         <label>Date of Birth (Instant Year Selector)</label>
                         <div class="rc-date-selector-row">
@@ -266,7 +279,6 @@ Red Cross West Godavari.</textarea>
                         </div>
                     </div>
 
-                    <!-- Instant Year / Month / Day Selector for Last Donation Date -->
                     <div class="form-group">
                         <label>Last Donation Date (Instant Year Selector)</label>
                         <div class="rc-date-selector-row">
@@ -285,6 +297,25 @@ Red Cross West Godavari.</textarea>
                         <button type="submit" class="rc-btn rc-btn-red">💾 Save Donor Record</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Broadcast WhatsApp Modal -->
+    <div class="rc-modal-overlay" id="broadcast-modal">
+        <div class="rc-modal" style="width: 680px;">
+            <div class="rc-modal-header">
+                <h3>🚀 Bulk WhatsApp Broadcast Dispatches</h3>
+                <button class="rc-modal-close" onclick="closeBroadcastModal()">×</button>
+            </div>
+            <div class="rc-modal-body">
+                <p class="text-muted">Click the WhatsApp buttons below to send the emergency alert message to each matched donor:</p>
+                <div id="broadcast-list" style="max-height: 380px; overflow-y: auto;">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+            <div class="rc-modal-footer">
+                <button type="button" class="rc-btn rc-btn-dark" onclick="closeBroadcastModal()">Done</button>
             </div>
         </div>
     </div>
