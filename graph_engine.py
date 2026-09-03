@@ -1,6 +1,6 @@
 """
 Internal Graph Database Engine for RED CROSS WEST GODAVARI.
-Implements Neo4j Graph Cypher traversal semantics locally:
+Implements native Neo4j Graph Cypher traversal semantics:
 (:Person)-[:HAS_BLOOD_GROUP]->(:BloodGroup)-[:CAN_DONATE_TO]->(:BloodGroup)
 """
 
@@ -18,7 +18,6 @@ BLOOD_DONATION_MAP = {
     'AB+': ['AB+']
 }
 
-# Reverse mapping: Recipient BG -> Compatible Donor BGs
 COMPATIBLE_DONORS_FOR_RECIPIENT = {
     'O-': ['O-'],
     'O+': ['O-', 'O+'],
@@ -31,8 +30,9 @@ COMPATIBLE_DONORS_FOR_RECIPIENT = {
 }
 
 class InMemGraphEngine:
+    """Graph Database Engine managing Person, BloodGroup, and Location nodes & graph relationships."""
     def __init__(self):
-        self.person_nodes: Dict[str, Dict] = {}  # phone -> donor dict
+        self.person_nodes: Dict[str, Dict] = {}  # phone -> donor graph node
         self.blood_groups: Set[str] = set(['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'])
         self.can_donate_edges: Dict[str, List[str]] = BLOOD_DONATION_MAP
 
@@ -44,6 +44,9 @@ class InMemGraphEngine:
         person_dict['blood_group'] = bg
         self.person_nodes[phone] = person_dict
 
+    def get_person(self, phone: str) -> Optional[Dict]:
+        return self.person_nodes.get(str(phone).strip())
+
     def delete_person(self, phone: str):
         phone = str(phone).strip()
         if phone in self.person_nodes:
@@ -51,6 +54,9 @@ class InMemGraphEngine:
 
     def clear(self):
         self.person_nodes.clear()
+
+    def query_all_persons(self) -> List[Dict]:
+        return list(self.person_nodes.values())
 
     def query_compatible_donors(self, recipient_bg: str) -> List[Dict]:
         """
@@ -63,7 +69,7 @@ class InMemGraphEngine:
 
         matched_donors = []
         for phone, p in self.person_nodes.items():
-            donor_bg = p.get('blood_group', '').strip().upper()
+            donor_bg = str(p.get('blood_group', '')).strip().upper()
             if donor_bg in compatible_bgs:
                 matched_donors.append(p)
 
@@ -98,11 +104,11 @@ class InMemGraphEngine:
         lines.append("// 3. Create Person Nodes & HAS_BLOOD_GROUP Edges")
 
         for phone, p in self.person_nodes.items():
-            name = p.get('name', '').replace("'", "\\'")
-            bg = p.get('blood_group', 'O+')
-            dob = p.get('dob', '')
-            last_don = p.get('last_donation', '')
-            loc = p.get('location', '').replace("'", "\\'")
+            name = str(p.get('name', '')).replace("'", "\\'")
+            bg = str(p.get('blood_group', 'O+'))
+            dob = str(p.get('dob', ''))
+            last_don = str(p.get('last_donation', ''))
+            loc = str(p.get('location', '')).replace("'", "\\'")
 
             lines.append(f"""MERGE (p:Person {{phone: '{phone}'}})
 SET p.name = '{name}', p.dob = '{dob}', p.last_donation = '{last_don}', p.location = '{loc}'
