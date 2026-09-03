@@ -8,6 +8,7 @@ import pandas as pd
 import datetime
 import os
 import io
+import logging
 
 from excel_handler import (
     normalize_columns, generate_sample_datasheet, save_dataframe_to_excel, 
@@ -21,7 +22,7 @@ from campaigns import (
 from neo4j_handler import Neo4jManager
 from graph_engine import InMemGraphEngine
 
-app = FastAPI(title="RED CROSS WEST GODAVARI REST API", version="2.0")
+app = FastAPI(title="RED CROSS WEST GODAVARI REST API — Neo4j Powered", version="2.5")
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,9 +34,12 @@ app.add_middleware(
 
 ACTIVE_EXCEL_PATH = "sample_donors.xlsx"
 
-# Initialize Local Graph Engine & Neo4j Manager
+# Connect to user's live local Neo4j instance "REDCROSS WG"
+neo4j_mgr = Neo4jManager(uri="bolt://localhost:7687", user="neo4j", password="REDCROSS WG")
+neo4j_connected = neo4j_mgr.connect()
+logging.info(f"Neo4j REDCROSS WG Instance Connection: {neo4j_connected}")
+
 graph_engine = InMemGraphEngine()
-neo4j_mgr = Neo4jManager()
 
 if not os.path.exists(ACTIVE_EXCEL_PATH):
     generate_sample_datasheet(ACTIVE_EXCEL_PATH)
@@ -45,7 +49,6 @@ def load_current_df() -> pd.DataFrame:
         raw_df = pd.read_excel(ACTIVE_EXCEL_PATH)
         norm_df = normalize_columns(raw_df)
         
-        # Sync all donors into local graph database engine
         graph_engine.clear()
         for idx, row in norm_df.iterrows():
             graph_engine.upsert_person(row.to_dict())
@@ -53,7 +56,6 @@ def load_current_df() -> pd.DataFrame:
         return norm_df
     return normalize_columns(pd.DataFrame())
 
-# Initial load
 load_current_df()
 
 os.makedirs("static", exist_ok=True)
@@ -73,11 +75,6 @@ class DonorCreate(BaseModel):
     last_donation: str
     location: Optional[str] = "Eluru, West Godavari"
     email: Optional[str] = ""
-
-class Neo4jConnectReq(BaseModel):
-    uri: str = "bolt://localhost:7687"
-    user: str = "neo4j"
-    password: str = "password"
 
 @app.get("/api/stats")
 def get_stats():
@@ -104,7 +101,7 @@ def get_stats():
         "birthdays_today": len(bday_df),
         "blood_inventory": bg_breakdown,
         "neo4j": n_stats,
-        "graph_node_count": len(graph_engine.person_nodes)
+        "graph_node_count": n_stats['person_count'] if neo4j_mgr.connected else len(graph_engine.person_nodes)
     }
 
 @app.get("/api/donors")
@@ -139,14 +136,13 @@ def add_donor(donor: DonorCreate):
     updated_df = pd.concat([df, new_row], ignore_index=True)
     save_dataframe_to_excel(updated_df, ACTIVE_EXCEL_PATH)
     
-    # Sync graph engine
     graph_engine.upsert_person(new_row.iloc[0].to_dict())
     
-    neo4j_status = False
+    neo4j_synced = False
     if neo4j_mgr.connected:
-        neo4j_status = neo4j_mgr.upsert_donor(new_row.iloc[0].to_dict())
+        neo4j_synced = neo4j_mgr.upsert_donor(new_row.iloc[0].to_dict())
         
-    return {"status": "success", "message": f"Added donor {donor.name}", "neo4j_synced": neo4j_status}
+    return {"status": "success", "message": f"Added donor {donor.name}", "neo4j_synced": neo4j_synced}
 
 @app.put("/api/donors/{phone}")
 def update_donor(phone: str, donor: DonorCreate):
@@ -192,12 +188,11 @@ def delete_donor(phone: str):
 def match_emergency(blood_group: str, hospital: Optional[str] = "GGH Eluru", urgency: Optional[str] = "HIGH"):
     clean_bg = blood_group.strip().upper()
     
-    # 1. Primary Graph Traversal Query
+    # Executing Graph Cypher Traversal on Neo4j instance "REDCROSS WG"
     if neo4j_mgr.connected:
         matched = neo4j_mgr.get_compatible_donors_graph(clean_bg)
-        engine_type = "NEO4J_REMOTE_GRAPH"
+        engine_type = "NEO4J_REDCROSS_WG_INSTANCE"
     else:
-        # Fallback to local Cypher-equivalent Graph Traversal Engine
         matched = graph_engine.query_compatible_donors(clean_bg)
         engine_type = "NEO4J_LOCAL_GRAPH_ENGINE"
         
@@ -272,14 +267,3 @@ def download_excel():
     if os.path.exists(ACTIVE_EXCEL_PATH):
         return FileResponse(ACTIVE_EXCEL_PATH, filename="RedCross_WestGodavari_Donors.xlsx")
     raise HTTPException(status_code=404, detail="Excel file not found")
-
-@app.post("/api/neo4j/connect")
-def connect_neo4j(req: Neo4jConnectReq):
-    neo4j_mgr.uri = req.uri
-    neo4j_mgr.user = req.user
-    neo4j_mgr.password = req.password
-    if neo4j_mgr.connect():
-        df = load_current_df()
-        synced = neo4j_mgr.sync_dataframe(df)
-        return {"status": "success", "message": f"Connected to Neo4j & synced {synced} nodes"}
-    return JSONResponse(status_code=400, content={"status": "error", "message": neo4j_mgr.error_message})
