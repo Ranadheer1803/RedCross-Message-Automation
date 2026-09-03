@@ -82,6 +82,7 @@ class AutoDispatchReq(BaseModel):
     blood_group: str
     hospital: str = "Government General Hospital, Eluru"
     urgency: str = "HIGH"
+    mode: str = "WEB_TAB"  # "WEB_TAB" or "PYWHATKIT_AUTO_ENTER"
 
 @app.get("/api/stats")
 def get_stats():
@@ -228,22 +229,34 @@ def auto_dispatch_emergency(req: AutoDispatchReq):
         matched = graph_engine.query_compatible_donors(clean_bg)
         
     dispatched_count = 0
+    dispatches = []
+    
     for donor in matched:
         msg = format_message(
             DEFAULT_EMERGENCY_MESSAGE,
             donor,
             extra_tags={'hospital': req.hospital, 'urgency': req.urgency, 'contact_person': 'Red Cross West Godavari (9876543210)'}
         )
-        wa_url = generate_whatsapp_web_url(donor.get('phone', ''), msg)
+        phone = donor.get('phone', '')
         
-        webbrowser.open(wa_url)
-        time.sleep(0.8)
+        if req.mode == "PYWHATKIT_AUTO_ENTER":
+            # Automated Python dispatcher that types message AND presses ENTER automatically!
+            res = dispatch_pywhatkit_message(phone, msg)
+            dispatches.append(res)
+        else:
+            # OS level launcher
+            wa_url = generate_whatsapp_web_url(phone, msg)
+            webbrowser.open(wa_url)
+            time.sleep(0.8)
+            dispatches.append({"status": "launched", "phone": phone})
+            
         dispatched_count += 1
         
     return {
         "status": "success",
-        "message": f"Successfully launched WhatsApp dispatches for all {dispatched_count} donors!",
-        "dispatched_count": dispatched_count
+        "message": f"Successfully auto-dispatched WhatsApp messages to all {dispatched_count} donors!",
+        "dispatched_count": dispatched_count,
+        "details": dispatches
     }
 
 @app.get("/api/neo4j/seed")

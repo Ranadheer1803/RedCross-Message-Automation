@@ -335,8 +335,8 @@ async function matchEmergencyDonors() {
     }
 }
 
-// 1-Click Launch All WhatsApp Chats Automatically via Server OS Launcher!
-async function launchAllWhatsAppTabsSequentially() {
+// 1-Click Auto Dispatch with Auto-Press ENTER option!
+async function launchAllWhatsAppTabsSequentially(modeType = "WEB_TAB") {
     if (!currentEmergencyMatches || currentEmergencyMatches.length === 0) {
         alert("No matched donors to notify.");
         return;
@@ -350,7 +350,7 @@ async function launchAllWhatsAppTabsSequentially() {
         const res = await fetch('/api/emergency/auto-dispatch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ blood_group: bg, hospital, urgency })
+            body: JSON.stringify({ blood_group: bg, hospital, urgency, mode: modeType })
         });
         const data = await res.json();
         if (res.ok) {
