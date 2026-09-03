@@ -335,23 +335,34 @@ async function matchEmergencyDonors() {
     }
 }
 
-// 1-Click Launch All WhatsApp Tabs Sequentially!
-function launchAllWhatsAppTabsSequentially() {
+// 1-Click Launch All WhatsApp Chats Automatically via Server OS Launcher!
+async function launchAllWhatsAppTabsSequentially() {
     if (!currentEmergencyMatches || currentEmergencyMatches.length === 0) {
         alert("No matched donors to notify.");
         return;
     }
 
-    let delay = 0;
-    currentEmergencyMatches.forEach((d, idx) => {
-        setTimeout(() => {
-            window.open(d.wa_url, '_blank');
-        }, delay);
-        delay += 1200; // 1.2 second pause between tabs to prevent browser popup block
-    });
+    const bg = document.getElementById('em-bg-select').value;
+    const hospital = document.getElementById('em-hospital').value;
+    const urgency = document.getElementById('em-urgency').value;
 
-    alert(`🚀 Launched WhatsApp dispatches for all ${currentEmergencyMatches.length} matched donors!`);
-    closeBroadcastModal();
+    try {
+        const res = await fetch('/api/emergency/auto-dispatch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blood_group: bg, hospital, urgency })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(`🚀 ${data.message}`);
+            closeBroadcastModal();
+        } else {
+            alert(`Failed: ${data.message}`);
+        }
+    } catch (e) {
+        console.error("Error auto-dispatching:", e);
+        alert(`Error triggering auto dispatch: ${e.message}`);
+    }
 }
 
 function requestAllEmergencyWhatsApp() {

@@ -9,6 +9,8 @@ import datetime
 import os
 import io
 import logging
+import webbrowser
+import time
 
 from excel_handler import (
     normalize_columns, generate_sample_datasheet, save_dataframe_to_excel, 
@@ -76,12 +78,10 @@ class DonorCreate(BaseModel):
     location: Optional[str] = "Eluru, West Godavari"
     email: Optional[str] = ""
 
-class BroadcastReq(BaseModel):
+class AutoDispatchReq(BaseModel):
     blood_group: str
     hospital: str = "Government General Hospital, Eluru"
     urgency: str = "HIGH"
-    custom_template: Optional[str] = None
-    dispatch_method: str = "AUTO"  # AUTO, PYWHATKIT, TWILIO
 
 @app.get("/api/stats")
 def get_stats():
@@ -218,8 +218,8 @@ def match_emergency(blood_group: str, hospital: Optional[str] = "GGH Eluru", urg
         "donors": matched
     }
 
-@app.post("/api/emergency/broadcast")
-def broadcast_emergency(req: BroadcastReq):
+@app.post("/api/emergency/auto-dispatch")
+def auto_dispatch_emergency(req: AutoDispatchReq):
     clean_bg = req.blood_group.strip().upper()
     
     if neo4j_mgr.connected:
@@ -227,29 +227,23 @@ def broadcast_emergency(req: BroadcastReq):
     else:
         matched = graph_engine.query_compatible_donors(clean_bg)
         
-    results = []
-    template_to_use = req.custom_template if req.custom_template else DEFAULT_EMERGENCY_MESSAGE
-    
+    dispatched_count = 0
     for donor in matched:
         msg = format_message(
-            template_to_use,
+            DEFAULT_EMERGENCY_MESSAGE,
             donor,
             extra_tags={'hospital': req.hospital, 'urgency': req.urgency, 'contact_person': 'Red Cross West Godavari (9876543210)'}
         )
         wa_url = generate_whatsapp_web_url(donor.get('phone', ''), msg)
         
-        results.append({
-            "name": donor.get('name', 'Donor'),
-            "phone": donor.get('phone', ''),
-            "blood_group": donor.get('blood_group', ''),
-            "wa_message": msg,
-            "wa_url": wa_url
-        })
+        webbrowser.open(wa_url)
+        time.sleep(0.8)
+        dispatched_count += 1
         
     return {
         "status": "success",
-        "broadcast_count": len(results),
-        "dispatches": results
+        "message": f"Successfully launched WhatsApp dispatches for all {dispatched_count} donors!",
+        "dispatched_count": dispatched_count
     }
 
 @app.get("/api/neo4j/seed")
