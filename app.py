@@ -25,14 +25,12 @@ st.set_page_config(
 # Custom Premium Red Cross Theme CSS (Light, Pristine, Editorial, Trustworthy)
 st.markdown("""
 <style>
-    /* Global Canvas */
     .stApp {
         background-color: #F8F9FA;
         color: #1E293B;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
     
-    /* Editorial Header Card */
     .rc-editorial-header {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -96,7 +94,6 @@ st.markdown("""
         text-transform: uppercase;
     }
 
-    /* Metric White Cards */
     .rc-card-metric {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -127,7 +124,6 @@ st.markdown("""
         margin-top: 4px;
     }
 
-    /* Blood Group Chips */
     .rc-bg-chip {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -153,7 +149,6 @@ st.markdown("""
         color: #1E293B;
     }
 
-    /* Donor Card Container */
     .rc-donor-item {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -168,7 +163,6 @@ st.markdown("""
         box-shadow: 0 8px 28px rgba(211, 47, 47, 0.1);
     }
 
-    /* WhatsApp Button */
     .rc-wa-button {
         background-color: #D32F2F;
         color: #FFFFFF !important;
@@ -189,7 +183,6 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(211, 47, 47, 0.35);
     }
 
-    /* Tabs Styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 12px;
         background-color: #FFFFFF;
@@ -215,13 +208,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 ACTIVE_EXCEL_PATH = "sample_donors.xlsx"
-
-def wipe_all_databases():
-    generate_sample_datasheet(ACTIVE_EXCEL_PATH)
-    empty_df = pd.DataFrame(columns=['name', 'phone', 'blood_group', 'dob', 'last_donation', 'location', 'email'])
-    st.session_state['df'] = normalize_columns(empty_df)
-    if 'neo4j' in st.session_state and st.session_state['neo4j'].connected:
-        st.session_state['neo4j'].clear_all_database()
 
 if 'df' not in st.session_state:
     if not os.path.exists(ACTIVE_EXCEL_PATH):
@@ -288,13 +274,6 @@ with st.sidebar:
             st.error(f"Error reading file: {e}")
             
     st.divider()
-    st.subheader("🔥 Start From Scratch")
-    if st.button("🚨 Wipe Database & Reset to Scratch"):
-        wipe_all_databases()
-        st.success("Wiped all records! Database reset to zero.")
-        st.rerun()
-        
-    st.divider()
     st.subheader("💡 Export Datasheet")
     if os.path.exists(ACTIVE_EXCEL_PATH):
         with open(ACTIVE_EXCEL_PATH, "rb") as f:
@@ -359,7 +338,7 @@ with m1:
     """, unsafe_allow_html=True)
 
 with m2:
-    eligible_count = len(df[df['is_eligible'] == True]) if 'is_eligible' in df.columns else 0
+    eligible_count = len(df[df['is_eligible'] == True]) if 'is_eligible' in df.columns and not df.empty else 0
     st.markdown(f"""
     <div class="rc-card-metric">
         <div class="rc-card-label">Eligible Donors (≥90 Days)</div>
@@ -391,7 +370,7 @@ st.markdown("##### 🩸 Blood Group Inventory (West Godavari Branch)")
 bg_cols = st.columns(8)
 all_groups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
 for i, bg_type in enumerate(all_groups):
-    count = len(df[df['blood_group'] == bg_type]) if 'blood_group' in df.columns else 0
+    count = len(df[df['blood_group'] == bg_type]) if 'blood_group' in df.columns and not df.empty else 0
     with bg_cols[i]:
         st.markdown(f"""
         <div class="rc-bg-chip">
@@ -412,7 +391,8 @@ tab1, tab2, tab3, tab4 = st.tabs([
 
 # ==================== TAB 1: DONOR REGISTRY ====================
 with tab1:
-    st.subheader("📋 Donor Registry Datasheet & Interactive Filters")
+    st.subheader("📋 Donor Registry Datasheet & Management")
+    st.info("Fill out the form below to register your first donor member, or upload an existing Excel datasheet in the sidebar.")
     
     col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
@@ -423,46 +403,43 @@ with tab1:
     with col_f3:
         eligibility_filter = st.selectbox("⏳ Filter Eligibility", ["All Donors", "Eligible Only (≥ 90 Days)", "Recently Donated (< 90 Days)"])
         
-    filtered_df = df.copy()
-    if search_query:
+    filtered_df = df.copy() if not df.empty else pd.DataFrame()
+    if not filtered_df.empty and search_query:
         filtered_df = filtered_df[
             filtered_df['name'].astype(str).str.contains(search_query, case=False, na=False) |
             filtered_df['phone'].astype(str).str.contains(search_query, case=False, na=False) |
             filtered_df['location'].astype(str).str.contains(search_query, case=False, na=False)
         ]
-    if selected_bg != "ALL":
+    if not filtered_df.empty and selected_bg != "ALL":
         filtered_df = filtered_df[filtered_df['blood_group'] == selected_bg]
-    if eligibility_filter == "Eligible Only (≥ 90 Days)":
+    if not filtered_df.empty and eligibility_filter == "Eligible Only (≥ 90 Days)":
         filtered_df = filtered_df[filtered_df['is_eligible'] == True]
-    elif eligibility_filter == "Recently Donated (< 90 Days)":
+    elif not filtered_df.empty and eligibility_filter == "Recently Donated (< 90 Days)":
         filtered_df = filtered_df[filtered_df['is_eligible'] == False]
         
-    st.write(f"Showing **{len(filtered_df)}** matching donor records:")
+    if filtered_df.empty:
+        st.warning("No donors registered yet in the registry. Use the form below to add your first member!")
+    else:
+        st.write(f"Showing **{len(filtered_df)}** matching donor records:")
+        display_cols = ['name', 'phone', 'blood_group', 'age', 'dob', 'last_donation', 'eligibility_status', 'location']
+        display_cols = [c for c in display_cols if c in filtered_df.columns]
+        st.dataframe(filtered_df[display_cols], use_container_width=True)
     
-    display_cols = ['name', 'phone', 'blood_group', 'age', 'dob', 'last_donation', 'eligibility_status', 'location']
-    display_cols = [c for c in display_cols if c in filtered_df.columns]
-    
-    st.dataframe(filtered_df[display_cols], use_container_width=True)
-    
-    exp_c1, exp_c2, exp_c3 = st.columns(3)
-    with exp_c1:
-        csv_data = filtered_df.to_csv(index=False)
-        st.download_button("📥 Export Filtered View to CSV", csv_data, "west_godavari_donors.csv", "text/csv")
-    with exp_c2:
-        json_data = filtered_df.to_json(orient="records", indent=2)
-        st.download_button("📥 Export Filtered View to JSON", json_data, "west_godavari_donors.json", "application/json")
-    with exp_c3:
-        if st.button("🚨 Wipe All Records & Start Scratch"):
-            wipe_all_databases()
-            st.success("Wiped all records!")
-            st.rerun()
+    if not filtered_df.empty:
+        exp_c1, exp_c2 = st.columns(2)
+        with exp_c1:
+            csv_data = filtered_df.to_csv(index=False)
+            st.download_button("📥 Export Registry to CSV", csv_data, "west_godavari_donors.csv", "text/csv")
+        with exp_c2:
+            json_data = filtered_df.to_json(orient="records", indent=2)
+            st.download_button("📥 Export Registry to JSON", json_data, "west_godavari_donors.json", "application/json")
             
     st.divider()
-    col_e1, col_e2, col_e3 = st.columns(3)
+    col_e1, col_e2 = st.columns(2)
     
     # --- Add New Donor Form ---
     with col_e1:
-        with st.expander("➕ Add New Donor Member", expanded=True):
+        with st.expander("➕ Add First / New Donor Member", expanded=True):
             with st.form("new_donor_form"):
                 n_name = st.text_input("Full Name *")
                 n_phone = st.text_input("Mobile Number *")
@@ -471,7 +448,7 @@ with tab1:
                 n_dob = st.date_input("Date of Birth", value=datetime.date(1998, 5, 15))
                 n_last = st.date_input("Last Donation Date", value=datetime.date.today() - datetime.timedelta(days=100))
                 
-                submitted = st.form_submit_button("💾 Save to Excel & Neo4j")
+                submitted = st.form_submit_button("💾 Save Member to Excel & Neo4j")
                 if submitted:
                     if not n_name or not n_phone:
                         st.error("Please provide Name and Phone number.")
@@ -493,13 +470,14 @@ with tab1:
                             neo4j_mgr.upsert_donor(new_row_df.iloc[0].to_dict())
                             neo4j_status = " & Neo4j"
                                 
-                        st.success(f"✅ Added '{n_name}' to Excel{neo4j_status}!")
+                        st.success(f"✅ Registered '{n_name}'! Saved to Excel{neo4j_status}.")
                         st.rerun()
 
     # --- Edit Existing Donor Form ---
     with col_e2:
-        with st.expander("✏️ Edit Existing Donor", expanded=True):
-            donor_to_edit = st.selectbox("Select Donor to Edit", ["-- Choose --"] + list(df['name'].dropna().unique()))
+        with st.expander("✏️ Edit Registered Donor", expanded=True):
+            donor_names = list(df['name'].dropna().unique()) if not df.empty else []
+            donor_to_edit = st.selectbox("Select Donor to Edit", ["-- Choose --"] + donor_names)
             if donor_to_edit != "-- Choose --":
                 donor_row = df[df['name'] == donor_to_edit].iloc[0]
                 with st.form("edit_donor_form"):
@@ -528,29 +506,10 @@ with tab1:
                         st.success(f"✅ Updated '{ed_name}' in Excel{neo_msg}!")
                         st.rerun()
 
-    # --- Delete Donor Form ---
-    with col_e3:
-        with st.expander("🗑️ Delete Donor Record", expanded=True):
-            donor_to_del = st.selectbox("Select Donor to Delete", ["-- Choose --"] + list(df['name'].dropna().unique()))
-            if donor_to_del != "-- Choose --":
-                donor_del_row = df[df['name'] == donor_to_del].iloc[0]
-                st.warning(f"Are you sure you want to remove **{donor_to_del}** (`{donor_del_row['phone']}`)?")
-                if st.button(f"❌ Delete {donor_to_del} Permanently"):
-                    phone_del = donor_del_row['phone']
-                    st.session_state['df'] = delete_donor_by_phone(st.session_state['df'], phone_del, ACTIVE_EXCEL_PATH)
-                    
-                    neo_del_msg = ""
-                    if neo4j_mgr.connected:
-                        neo4j_mgr.delete_donor(phone_del)
-                        neo_del_msg = " & Neo4j"
-                        
-                    st.success(f"Deleted '{donor_to_del}' from Excel{neo_del_msg}!")
-                    st.rerun()
-
 # ==================== TAB 2: EMERGENCY REQUEST ====================
 with tab2:
     st.subheader("🚨 Emergency Blood Dispatcher — RED CROSS WEST GODAVARI")
-    st.info("Select the required blood group. You can query matching donors using standard Excel filter or Neo4j Graph Traversal (`CAN_DONATE_TO`).")
+    st.info("Select the required blood group. The system will match donors from your registered database.")
     
     col_e1, col_e2 = st.columns([1, 2])
     
@@ -573,8 +532,8 @@ with tab2:
                 match_df = match_df[match_df['is_eligible'] == True]
             st.success("Queried via Neo4j Graph Cypher!")
         else:
-            match_df = df[df['blood_group'] == clean_req_bg].copy()
-            if only_eligible:
+            match_df = df[df['blood_group'] == clean_req_bg].copy() if not df.empty else pd.DataFrame()
+            if not match_df.empty and only_eligible:
                 match_df = match_df[match_df['is_eligible'] == True]
                 
         st.markdown(f"**Found <span style='color:#D32F2F; font-size:22px;'>{len(match_df)}</span> donors who can donate to {clean_req_bg}**", unsafe_allow_html=True)
@@ -601,7 +560,7 @@ with tab2:
     st.subheader("📤 Target Donors & Interactive WhatsApp Dispatcher")
     
     if match_df.empty:
-        st.warning(f"No matching donors found for blood group {clean_req_bg}.")
+        st.warning(f"No matching donors found for blood group {clean_req_bg}. Add registered members in Tab 1.")
     else:
         col_act1, col_act2 = st.columns([2, 1])
         with col_act1:
@@ -688,7 +647,7 @@ with tab3:
     with col_b1:
         st.markdown("#### 🎉 Donors Celebrating Birthday Today")
         if bday_today_df.empty:
-            st.info("No donors have birthdays today.")
+            st.info("No registered donors have birthdays today.")
         else:
             for idx, donor in bday_today_df.iterrows():
                 b_msg = format_message(DEFAULT_BIRTHDAY_MESSAGE, donor.to_dict())
@@ -786,7 +745,7 @@ with tab4:
                 st.success(f"Synced {synced} donor nodes to Neo4j!")
         else:
             st.warning("🔴 Neo4j Disconnected. Enter credentials in sidebar to connect.")
-            st.info("When Neo4j is disconnected, all additions, edits, & deletions automatically persist to the Excel sheet.")
+            st.info("When Neo4j is disconnected, all additions & edits automatically persist to the Excel sheet.")
 
     with col_n2:
         st.markdown("#### 📜 Messaging Logs")

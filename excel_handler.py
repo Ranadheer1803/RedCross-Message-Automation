@@ -39,7 +39,7 @@ def clean_phone_number(phone_raw) -> str:
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Identify, map, and standardize dataframe columns with error-resilient type casting."""
     if df is None or df.empty:
-        df = pd.DataFrame(columns=['name', 'phone', 'blood_group', 'dob', 'last_donation', 'location', 'email'])
+        return pd.DataFrame(columns=['name', 'phone', 'blood_group', 'dob', 'last_donation', 'location', 'email', 'dob_dt', 'last_donation_dt', 'age', 'days_since_donation', 'days_until_eligible', 'is_eligible', 'eligibility_status'])
         
     normalized_df = df.copy()
     col_rename_map = {}
@@ -133,7 +133,7 @@ def delete_donor_by_phone(df: pd.DataFrame, phone: str, file_path: str = "sample
     return updated_df
 
 def generate_sample_datasheet(file_path: str = "sample_donors.xlsx") -> str:
-    """Generate an empty Excel datasheet template with standard headers."""
+    """Generate an empty Excel datasheet template with standard headers and 0 records."""
     columns = [
         "Full Name",
         "Mobile Number",
