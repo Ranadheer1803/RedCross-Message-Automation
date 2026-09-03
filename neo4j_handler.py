@@ -16,7 +16,6 @@ BLOOD_DONATION_MAP = {
 }
 
 def clean_value(val, default=""):
-    """Convert pandas NaN / NaT / None to standard python types for Neo4j Cypher."""
     if pd.isna(val) or val is None:
         return default
     return str(val).strip()
@@ -31,7 +30,6 @@ class Neo4jManager:
         self.error_message = ""
         
     def connect(self) -> bool:
-        """Attempt connection to Neo4j database."""
         try:
             from neo4j import GraphDatabase
             self.driver = GraphDatabase.driver(self.uri, auth=(self.user, self.password))
@@ -51,7 +49,6 @@ class Neo4jManager:
             self.driver.close()
 
     def initialize_schema(self):
-        """Create constraints, BloodGroup nodes, and CAN_DONATE_TO compatibility edges."""
         if not self.connected or not self.driver:
             return
             
@@ -72,8 +69,19 @@ class Neo4jManager:
                         MERGE (donor)-[:CAN_DONATE_TO]->(rec)
                     """, donor_bg=donor_bg, rec_bg=recipient_bg)
 
+    def clear_all_database((self)) -> bool:
+        """Purge all Person nodes from Neo4j while retaining BloodGroup schema."""
+        if not self.connected or not self.driver:
+            return False
+        try:
+            with self.driver.session() as session:
+                session.run("MATCH (p:Person) DETACH DELETE p")
+            return True
+        except Exception as e:
+            logging.error(f"Error purging Neo4j database: {e}")
+            return False
+
     def upsert_donor(self, donor_dict: Dict) -> bool:
-        """Upsert a single donor node and relationships in Neo4j cleanly."""
         if not self.connected or not self.driver:
             return False
             
@@ -123,7 +131,6 @@ class Neo4jManager:
             return False
 
     def delete_donor(self, phone: str) -> bool:
-        """Delete a donor node and its relationships from Neo4j."""
         if not self.connected or not self.driver:
             return False
         clean_p = clean_value(phone)
@@ -139,7 +146,6 @@ class Neo4jManager:
             return False
 
     def sync_dataframe(self, df: pd.DataFrame) -> int:
-        """Sync entire dataframe to Neo4j."""
         if not self.connected or df is None or df.empty:
             return 0
         count = 0
@@ -149,7 +155,6 @@ class Neo4jManager:
         return count
 
     def get_compatible_donors_graph(self, target_blood_group: str) -> List[Dict]:
-        """Cypher Traversal: Find donors whose blood group CAN_DONATE_TO target blood group."""
         if not self.connected or not self.driver:
             return []
             
@@ -166,7 +171,6 @@ class Neo4jManager:
             return []
 
     def get_neo4j_stats(self) -> Dict:
-        """Return counts of Person nodes, BloodGroup nodes, and relationships."""
         if not self.connected or not self.driver:
             return {"status": "Disconnected", "person_count": 0, "rel_count": 0}
             

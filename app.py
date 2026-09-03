@@ -25,14 +25,12 @@ st.set_page_config(
 # Custom Red Cross CSS Design System
 st.markdown("""
 <style>
-    /* Red Cross Modern Dark & Crimson Theme */
     .stApp {
         background: linear-gradient(135deg, #0B0F19 0%, #1A1C29 50%, #0F111A 100%);
         color: #F8FAFC;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
     
-    /* Header Container */
     .redcross-header {
         background: linear-gradient(135deg, rgba(229, 57, 53, 0.15) 0%, rgba(198, 40, 40, 0.05) 100%);
         border: 1px solid rgba(229, 57, 53, 0.35);
@@ -70,7 +68,6 @@ st.markdown("""
         margin-top: 6px;
     }
 
-    /* Metric Glass Cards */
     .rc-metric-card {
         background: rgba(26, 28, 41, 0.75);
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -101,7 +98,6 @@ st.markdown("""
         margin-top: 4px;
     }
 
-    /* Interactive Blood Group Badges */
     .bg-badge-card {
         background: rgba(229, 57, 53, 0.1);
         border: 1px solid rgba(229, 57, 53, 0.25);
@@ -125,7 +121,6 @@ st.markdown("""
         color: #FFFFFF;
     }
 
-    /* Donor Card Container */
     .donor-card {
         background: rgba(30, 33, 48, 0.7);
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -139,7 +134,6 @@ st.markdown("""
         box-shadow: 0 8px 24px rgba(229, 57, 53, 0.15);
     }
 
-    /* WhatsApp Glass Button */
     .wa-btn {
         background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
         color: #FFFFFF !important;
@@ -159,7 +153,6 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(37, 211, 102, 0.5);
     }
 
-    /* Streamlit Tabs override */
     .stTabs [data-baseweb="tab-list"] {
         gap: 12px;
         background-color: rgba(15, 17, 26, 0.8);
@@ -184,6 +177,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 ACTIVE_EXCEL_PATH = "sample_donors.xlsx"
+
+# Reset helper
+def wipe_all_databases():
+    generate_sample_datasheet(ACTIVE_EXCEL_PATH)
+    empty_df = pd.DataFrame(columns=['name', 'phone', 'blood_group', 'dob', 'last_donation', 'location', 'email'])
+    st.session_state['df'] = normalize_columns(empty_df)
+    if 'neo4j' in st.session_state and st.session_state['neo4j'].connected:
+        st.session_state['neo4j'].clear_all_database()
 
 if 'df' not in st.session_state:
     if not os.path.exists(ACTIVE_EXCEL_PATH):
@@ -241,6 +242,13 @@ with st.sidebar:
         except Exception as e:
             st.error(f"Error reading file: {e}")
             
+    st.divider()
+    st.subheader("🔥 Start From Scratch")
+    if st.button("🚨 Wipe Database & Reset to Scratch"):
+        wipe_all_databases()
+        st.success("Wiped all records! Database reset to zero.")
+        st.rerun()
+        
     st.divider()
     
     st.subheader("💡 Export Datasheet")
@@ -399,7 +407,12 @@ with tab1:
     with exp_c2:
         json_data = filtered_df.to_json(orient="records", indent=2)
         st.download_button("📥 Export Filtered View to JSON", json_data, "west_godavari_donors.json", "application/json")
-        
+    with exp_c3:
+        if st.button("🚨 Wipe All Records & Start Scratch"):
+            wipe_all_databases()
+            st.success("Wiped all records!")
+            st.rerun()
+            
     st.divider()
     col_e1, col_e2, col_e3 = st.columns(3)
     
