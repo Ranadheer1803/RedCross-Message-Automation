@@ -30,7 +30,6 @@ class Neo4jManager:
         try:
             from neo4j import GraphDatabase
             self.driver = GraphDatabase.driver(self.uri, auth=(self.user, self.password))
-            # Test connectivity
             self.driver.verify_connectivity()
             self.connected = True
             self.error_message = ""
@@ -52,14 +51,12 @@ class Neo4jManager:
             return
             
         with self.driver.session() as session:
-            # Create constraint on Person phone
             try:
                 session.run("CREATE CONSTRAINT person_phone_uniq IF NOT EXISTS FOR (p:Person) REQUIRE p.phone IS UNIQUE")
                 session.run("CREATE CONSTRAINT bg_type_uniq IF NOT EXISTS FOR (b:BloodGroup) REQUIRE b.type IS UNIQUE")
             except Exception as e:
                 logging.info(f"Schema constraint init info: {e}")
                 
-            # Populate BloodGroup nodes & CAN_DONATE_TO relationships
             for donor_bg, recipients in BLOOD_DONATION_MAP.items():
                 session.run("MERGE (b:BloodGroup {type: $bg})", bg=donor_bg)
                 for recipient_bg in recipients:
@@ -110,6 +107,16 @@ class Neo4jManager:
             )
         return True
 
+    def delete_donor(self, phone: str) -> bool:
+        """Delete a donor node and its relationships from Neo4j."""
+        if not self.connected or not self.driver:
+            return False
+        clean_p = str(phone).strip()
+        query = "MATCH (p:Person {phone: $phone}) DETACH DELETE p"
+        with self.driver.session() as session:
+            session.run(query, phone=clean_p)
+        return True
+
     def sync_dataframe(self, df: pd.DataFrame) -> int:
         """Sync entire dataframe to Neo4j."""
         if not self.connected or df is None or df.empty:
@@ -121,9 +128,7 @@ class Neo4jManager:
         return count
 
     def get_compatible_donors_graph(self, target_blood_group: str) -> List[Dict]:
-        """
-        Cypher Traversal: Find all donors whose blood group CAN_DONATE_TO the target blood group.
-        """
+        """Cypher Traversal: Find donors whose blood group CAN_DONATE_TO target blood group."""
         if not self.connected or not self.driver:
             return []
             

@@ -44,6 +44,14 @@ DEFAULT_EMERGENCY_MESSAGE = (
     "Your timely help can save a life today! Thank you, Red Cross Society."
 )
 
+def get_days_until_event(month: int, day: int) -> int:
+    """Calculate days remaining until specified month and day."""
+    today = datetime.date.today()
+    event_date = datetime.date(today.year, month, day)
+    if event_date < today:
+        event_date = datetime.date(today.year + 1, month, day)
+    return (event_date - today).days
+
 def get_today_birthdays(df: pd.DataFrame) -> pd.DataFrame:
     """Find donors whose birthday (month and day) matches today."""
     if df is None or df.empty or 'dob_dt' not in df.columns:
@@ -51,7 +59,6 @@ def get_today_birthdays(df: pd.DataFrame) -> pd.DataFrame:
     
     today = datetime.date.today()
     
-    # Filter rows where dob_dt month & day match today
     def is_birthday_today(dob):
         if pd.isna(dob):
             return False
@@ -73,9 +80,8 @@ def get_upcoming_birthdays(df: pd.DataFrame, days: int = 7) -> pd.DataFrame:
         if pd.isna(dob):
             continue
         try:
-            # Replace year with current year
             bday_this_year = datetime.date(today.year, dob.month, dob.day)
-        except ValueError: # Feb 29 leap year edge case
+        except ValueError:
             bday_this_year = datetime.date(today.year, 2, 28)
             
         if bday_this_year < today:
@@ -96,14 +102,14 @@ def format_message(template: str, donor_row: dict, extra_tags: dict = None) -> s
     """Format template message with donor properties and extra tags."""
     msg = template
     
-    # Standard donor tags
     tags = {
         'name': str(donor_row.get('name', 'Valued Donor')),
         'blood_group': str(donor_row.get('blood_group', 'Blood')),
         'phone': str(donor_row.get('phone', '')),
         'location': str(donor_row.get('location', 'your area')),
         'dob': str(donor_row.get('dob', '')),
-        'last_donation': str(donor_row.get('last_donation', 'N/A'))
+        'last_donation': str(donor_row.get('last_donation', 'N/A')),
+        'age': str(donor_row.get('age', 'N/A'))
     }
     
     if extra_tags:

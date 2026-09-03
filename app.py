@@ -3,13 +3,14 @@ import pandas as pd
 import datetime
 import os
 import io
+import json
 
 # Custom imports
-from excel_handler import normalize_columns, generate_sample_datasheet, save_dataframe_to_excel
+from excel_handler import normalize_columns, generate_sample_datasheet, save_dataframe_to_excel, delete_donor_by_phone
 from whatsapp_engine import generate_whatsapp_web_url, generate_wa_me_link, dispatch_pywhatkit_message, dispatch_twilio_whatsapp
 from campaigns import (
     SPECIAL_EVENTS, DEFAULT_BIRTHDAY_MESSAGE, DEFAULT_EMERGENCY_MESSAGE,
-    get_today_birthdays, get_upcoming_birthdays, format_message
+    get_today_birthdays, get_upcoming_birthdays, format_message, get_days_until_event
 )
 from neo4j_handler import Neo4jManager
 
@@ -24,14 +25,12 @@ st.set_page_config(
 # Custom CSS for rich aesthetics
 st.markdown("""
 <style>
-    /* Dark glassmorphic theme styling */
     .stApp {
         background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
         color: #F8FAFC;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
     
-    /* Header Card */
     .header-card {
         background: rgba(225, 29, 72, 0.12);
         border: 1px solid rgba(225, 29, 72, 0.3);
@@ -59,7 +58,6 @@ st.markdown("""
         margin-top: 4px;
     }
     
-    /* Metric Cards */
     .metric-card {
         background: rgba(30, 41, 59, 0.7);
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -88,6 +86,24 @@ st.markdown("""
         margin-top: 4px;
     }
 
+    .blood-chip {
+        background: rgba(225, 29, 72, 0.15);
+        border: 1px solid rgba(225, 29, 72, 0.3);
+        border-radius: 10px;
+        padding: 10px 14px;
+        text-align: center;
+    }
+    .blood-chip-title {
+        font-size: 16px;
+        font-weight: 800;
+        color: #F43F5E;
+    }
+    .blood-chip-val {
+        font-size: 20px;
+        font-weight: 700;
+        color: #FFFFFF;
+    }
+
     .wa-button {
         background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
         color: white !important;
@@ -107,7 +123,6 @@ st.markdown("""
         box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
     }
 
-    /* Tabs override */
     .stTabs [data-baseweb="tab-list"] {
         gap: 12px;
         background-color: rgba(15, 23, 42, 0.6);
@@ -130,7 +145,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize Session State
 ACTIVE_EXCEL_PATH = "sample_donors.xlsx"
 
 if 'df' not in st.session_state:
@@ -145,6 +159,9 @@ if 'dispatch_logs' not in st.session_state:
 if 'neo4j' not in st.session_state:
     st.session_state['neo4j'] = Neo4jManager()
 
+if 'custom_events' not in st.session_state:
+    st.session_state['custom_events'] = []
+
 neo4j_mgr: Neo4jManager = st.session_state['neo4j']
 
 # Header Section
@@ -153,7 +170,7 @@ st.markdown("""
     <div style="font-size: 42px;">🩸</div>
     <div>
         <div class="header-title">Red Cross Message Automation</div>
-        <div class="header-subtitle">Smart Blood Donor Emergency Dispatcher & Neo4j Graph Automation Platform</div>
+        <div class="header-subtitle">Refined Blood Donor Dispatcher, Excel Sync & Neo4j Automation System</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -173,10 +190,9 @@ with st.sidebar:
             st.session_state['df'] = normalize_columns(raw_df)
             save_dataframe_to_excel(st.session_state['df'], ACTIVE_EXCEL_PATH)
             
-            # Sync to Neo4j if connected
             if neo4j_mgr.connected:
                 synced = neo4j_mgr.sync_dataframe(st.session_state['df'])
-                st.success(f"Loaded {len(st.session_state['df'])} records into Excel & synced {synced} to Neo4j!")
+                st.success(f"Loaded {len(st.session_state['df'])} records & synced {synced} to Neo4j!")
             else:
                 st.success(f"Loaded {len(st.session_state['df'])} records from {uploaded_file.name}")
         except Exception as e:
@@ -184,12 +200,11 @@ with st.sidebar:
             
     st.divider()
     
-    # Download current datasheet button
-    st.subheader("💡 Export / Test File")
+    st.subheader("💡 Export / Downloads")
     if os.path.exists(ACTIVE_EXCEL_PATH):
         with open(ACTIVE_EXCEL_PATH, "rb") as f:
             st.download_button(
-                label="📥 Download Current Excel Datasheet",
+                label="📥 Download Excel Sheet (.xlsx)",
                 data=f,
                 file_name="RedCross_Current_Donors.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -197,7 +212,6 @@ with st.sidebar:
             
     st.divider()
     
-    # Neo4j Database Connection Box
     st.subheader("🌐 Neo4j Graph DB Connection")
     n_uri = st.text_input("Neo4j URI", value="bolt://localhost:7687")
     n_user = st.text_input("Username", value="neo4j")
@@ -210,10 +224,9 @@ with st.sidebar:
             neo4j_mgr.user = n_user
             neo4j_mgr.password = n_pwd
             if neo4j_mgr.connect():
-                st.success("Connected to Neo4j!")
-                # Auto-sync
+                st.success("Connected!")
                 synced_cnt = neo4j_mgr.sync_dataframe(st.session_state['df'])
-                st.info(f"Synced {synced_cnt} records into Neo4j graph!")
+                st.info(f"Synced {synced_cnt} records!")
             else:
                 st.error(f"Failed: {neo4j_mgr.error_message}")
                 
@@ -221,7 +234,7 @@ with st.sidebar:
         if neo4j_mgr.connected:
             st.markdown("🟢 **Neo4j Connected**")
         else:
-            st.markdown("🔴 **Neo4j Offline** (Excel fallback active)")
+            st.markdown("🔴 **Neo4j Offline** (Excel mode active)")
             
     st.divider()
     st.subheader("⚙️ Dispatch Method")
@@ -234,11 +247,10 @@ with st.sidebar:
     if dispatch_mode == "Twilio WhatsApp API":
         twilio_sid = st.text_input("Twilio Account SID", type="password")
         twilio_token = st.text_input("Twilio Auth Token", type="password")
-        twilio_from = st.text_input("Twilio From Number (e.g. +14155238886)")
+        twilio_from = st.text_input("Twilio From Number")
     else:
         twilio_sid, twilio_token, twilio_from = None, None, None
 
-# Current dataset reference
 df = st.session_state['df']
 
 # Top Metrics Row
@@ -278,9 +290,24 @@ with m4:
     </div>
     """, unsafe_allow_html=True)
 
+# Blood Group Breakdown Cards
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("##### 🩸 Blood Group Inventory Breakdown")
+bg_cols = st.columns(8)
+all_groups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
+for i, bg_type in enumerate(all_groups):
+    count = len(df[df['blood_group'] == bg_type]) if 'blood_group' in df.columns else 0
+    with bg_cols[i]:
+        st.markdown(f"""
+        <div class="blood-chip">
+            <div class="blood-chip-title">{bg_type}</div>
+            <div class="blood-chip-val">{count}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Main Navigation Tabs
+# Main Tabs
 tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Donor Registry", 
     "🚨 Emergency Request", 
@@ -291,13 +318,13 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # ==================== TAB 1: DONOR REGISTRY ====================
 with tab1:
     st.subheader("📋 Donor Registry Datasheet & Management")
-    st.info("Adding or editing donor records here automatically updates the Excel file on disk and syncs with Neo4j.")
+    st.info("Adding, editing, or deleting donor records automatically updates the Excel file on disk and syncs with Neo4j.")
     
     col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
-        search_query = st.text_input("🔍 Search Donor Name or Phone")
+        search_query = st.text_input("🔍 Search Donor Name, Phone, or City")
     with col_f2:
-        bg_options = ["ALL"] + sorted(list(df['blood_group'].dropna().unique()))
+        bg_options = ["ALL"] + all_groups
         selected_bg = st.selectbox("🩸 Filter by Blood Group", bg_options)
     with col_f3:
         eligibility_filter = st.selectbox("⏳ Filter Eligibility", ["All Donors", "Eligible Only (≥ 90 Days)", "Recently Donated (< 90 Days)"])
@@ -306,7 +333,8 @@ with tab1:
     if search_query:
         filtered_df = filtered_df[
             filtered_df['name'].astype(str).str.contains(search_query, case=False, na=False) |
-            filtered_df['phone'].astype(str).str.contains(search_query, case=False, na=False)
+            filtered_df['phone'].astype(str).str.contains(search_query, case=False, na=False) |
+            filtered_df['location'].astype(str).str.contains(search_query, case=False, na=False)
         ]
     if selected_bg != "ALL":
         filtered_df = filtered_df[filtered_df['blood_group'] == selected_bg]
@@ -317,25 +345,35 @@ with tab1:
         
     st.write(f"Showing **{len(filtered_df)}** matching donor records:")
     
-    display_cols = ['name', 'phone', 'blood_group', 'dob', 'last_donation', 'location', 'is_eligible']
+    display_cols = ['name', 'phone', 'blood_group', 'age', 'dob', 'last_donation', 'eligibility_status', 'location']
     display_cols = [c for c in display_cols if c in filtered_df.columns]
     
     st.dataframe(filtered_df[display_cols], use_container_width=True)
     
-    col_e1, col_e2 = st.columns(2)
+    # Export Options
+    exp_c1, exp_c2, exp_c3 = st.columns(3)
+    with exp_c1:
+        csv_data = filtered_df.to_csv(index=False)
+        st.download_button("📥 Export Filtered View to CSV", csv_data, "filtered_donors.csv", "text/csv")
+    with exp_c2:
+        json_data = filtered_df.to_json(orient="records", indent=2)
+        st.download_button("📥 Export Filtered View to JSON", json_data, "filtered_donors.json", "application/json")
+        
+    st.divider()
+    col_e1, col_e2, col_e3 = st.columns(3)
     
     # --- Add New Donor Form ---
     with col_e1:
-        with st.expander("➕ Add New Donor (Persists to Excel & Neo4j)", expanded=True):
+        with st.expander("➕ Add New Donor Record", expanded=True):
             with st.form("new_donor_form"):
                 n_name = st.text_input("Full Name *")
                 n_phone = st.text_input("Mobile Number *")
-                n_bg = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
+                n_bg = st.selectbox("Blood Group", all_groups)
                 n_loc = st.text_input("Location / City", value="Hyderabad")
                 n_dob = st.date_input("Date of Birth", value=datetime.date(1998, 5, 15))
                 n_last = st.date_input("Last Donation Date", value=datetime.date.today() - datetime.timedelta(days=100))
                 
-                submitted = st.form_submit_button("💾 Add Donor to Excel & Neo4j")
+                submitted = st.form_submit_button("💾 Save to Excel & Neo4j")
                 if submitted:
                     if not n_name or not n_phone:
                         st.error("Please provide Name and Phone number.")
@@ -349,52 +387,40 @@ with tab1:
                             'location': n_loc
                         }
                         new_row_df = normalize_columns(pd.DataFrame([new_dict]))
-                        
-                        # 1. Update in Session state
                         st.session_state['df'] = pd.concat([st.session_state['df'], new_row_df], ignore_index=True)
-                        
-                        # 2. Persist to Excel file on disk
                         save_dataframe_to_excel(st.session_state['df'], ACTIVE_EXCEL_PATH)
                         
-                        # 3. Persist to Neo4j if connected
                         neo4j_status = ""
                         if neo4j_mgr.connected:
-                            res = neo4j_mgr.upsert_donor(new_row_df.iloc[0].to_dict())
-                            if res:
-                                neo4j_status = " & Neo4j graph"
+                            neo4j_mgr.upsert_donor(new_row_df.iloc[0].to_dict())
+                            neo4j_status = " & Neo4j"
                                 
-                        st.success(f"✅ Added '{n_name}'! Saved to Excel sheet ({ACTIVE_EXCEL_PATH}){neo4j_status}.")
+                        st.success(f"✅ Added '{n_name}' to Excel{neo4j_status}!")
                         st.rerun()
 
     # --- Edit Existing Donor Form ---
     with col_e2:
-        with st.expander("✏️ Edit Existing Donor (Persists to Excel & Neo4j)", expanded=True):
+        with st.expander("✏️ Edit Existing Donor", expanded=True):
             donor_to_edit = st.selectbox("Select Donor to Edit", ["-- Choose --"] + list(df['name'].dropna().unique()))
             if donor_to_edit != "-- Choose --":
                 donor_row = df[df['name'] == donor_to_edit].iloc[0]
                 with st.form("edit_donor_form"):
                     ed_name = st.text_input("Full Name", value=str(donor_row['name']))
                     ed_phone = st.text_input("Mobile Number", value=str(donor_row['phone']))
-                    ed_bg = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"], 
-                                         index=["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].index(donor_row['blood_group']) if donor_row['blood_group'] in ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"] else 0)
+                    ed_bg = st.selectbox("Blood Group", all_groups, index=all_groups.index(donor_row['blood_group']) if donor_row['blood_group'] in all_groups else 0)
                     ed_loc = st.text_input("Location", value=str(donor_row['location']))
                     
                     edit_submitted = st.form_submit_button("🔄 Update Member Record")
                     if edit_submitted:
-                        # Update row in session state dataframe
                         idx_to_update = df[df['name'] == donor_to_edit].index[0]
                         st.session_state['df'].at[idx_to_update, 'name'] = ed_name
                         st.session_state['df'].at[idx_to_update, 'phone'] = ed_phone
                         st.session_state['df'].at[idx_to_update, 'blood_group'] = ed_bg
                         st.session_state['df'].at[idx_to_update, 'location'] = ed_loc
                         
-                        # Re-normalize
                         st.session_state['df'] = normalize_columns(st.session_state['df'])
-                        
-                        # 1. Save to Excel
                         save_dataframe_to_excel(st.session_state['df'], ACTIVE_EXCEL_PATH)
                         
-                        # 2. Sync to Neo4j
                         neo_msg = ""
                         if neo4j_mgr.connected:
                             updated_dict = st.session_state['df'].loc[idx_to_update].to_dict()
@@ -403,6 +429,25 @@ with tab1:
                             
                         st.success(f"✅ Updated '{ed_name}' in Excel{neo_msg}!")
                         st.rerun()
+
+    # --- Delete Donor Form ---
+    with col_e3:
+        with st.expander("🗑️ Delete Donor Record", expanded=True):
+            donor_to_del = st.selectbox("Select Donor to Delete", ["-- Choose --"] + list(df['name'].dropna().unique()))
+            if donor_to_del != "-- Choose --":
+                donor_del_row = df[df['name'] == donor_to_del].iloc[0]
+                st.warning(f"Are you sure you want to remove **{donor_to_del}** (`{donor_del_row['phone']}`)?")
+                if st.button(f"❌ Delete {donor_to_del} Permanently"):
+                    phone_del = donor_del_row['phone']
+                    st.session_state['df'] = delete_donor_by_phone(st.session_state['df'], phone_del, ACTIVE_EXCEL_PATH)
+                    
+                    neo_del_msg = ""
+                    if neo4j_mgr.connected:
+                        neo4j_mgr.delete_donor(phone_del)
+                        neo_del_msg = " & Neo4j"
+                        
+                    st.success(f"Deleted '{donor_to_del}' from Excel{neo_del_msg}!")
+                    st.rerun()
 
 # ==================== TAB 2: EMERGENCY REQUEST ====================
 with tab2:
@@ -423,7 +468,6 @@ with tab2:
         
         only_eligible = st.checkbox("Only include eligible donors (≥90 days since last donation)", value=True)
         
-        # Perform matching
         if query_engine == "Neo4j Graph Traversal (:CAN_DONATE_TO)" and neo4j_mgr.connected:
             neo_results = neo4j_mgr.get_compatible_donors_graph(clean_req_bg)
             match_df = pd.DataFrame(neo_results)
@@ -431,7 +475,6 @@ with tab2:
                 match_df = match_df[match_df['is_eligible'] == True]
             st.success("Queried via Neo4j Graph Cypher!")
         else:
-            # Excel fallback standard matching
             match_df = df[df['blood_group'] == clean_req_bg].copy()
             if only_eligible:
                 match_df = match_df[match_df['is_eligible'] == True]
@@ -508,6 +551,7 @@ with tab2:
             d_phone = donor['phone']
             d_bg = donor['blood_group']
             d_loc = donor['location']
+            d_status = donor.get('eligibility_status', 'Eligible')
             
             donor_msg = format_message(
                 msg_template, 
@@ -520,7 +564,7 @@ with tab2:
             with c_d1:
                 st.markdown(f"**{d_name}**")
             with c_d2:
-                st.markdown(f"🩸 `{d_bg}` | 📍 {d_loc}")
+                st.markdown(f"🩸 `{d_bg}` | 📍 {d_loc} | `{d_status}`")
             with c_d3:
                 st.markdown(f"📞 `{d_phone}`")
             with c_d4:
@@ -529,7 +573,7 @@ with tab2:
 
 # ==================== TAB 3: BIRTHDAYS & CAMPAIGNS ====================
 with tab3:
-    st.subheader("🎂 Birthday Celebrations & Donor Appreciation")
+    st.subheader("🎂 Birthday Celebrations & Campaign Automation")
     
     bday_today_df = get_today_birthdays(df)
     bday_upcoming_df = get_upcoming_birthdays(df, days=7)
@@ -562,12 +606,27 @@ with tab3:
                 st.markdown(f"• **{donor['name']}** ({donor['blood_group']}) - Birthday in **{donor['days_until_bday']}** days")
                 
     st.divider()
-    st.subheader("📅 Awareness Days & Red Cross Campaigns")
+    st.subheader("📅 Awareness Days & Custom Campaign Builder")
     
-    selected_event = st.selectbox("Select Awareness Campaign Day", [e['name'] for e in SPECIAL_EVENTS])
-    event_info = next(e for e in SPECIAL_EVENTS if e['name'] == selected_event)
+    all_events = SPECIAL_EVENTS + st.session_state['custom_events']
     
-    st.markdown(f"**Date**: `{event_info['date_str']}`")
+    # Event countdown badges
+    ev_cols = st.columns(len(all_events))
+    for i, ev in enumerate(all_events):
+        days_rem = get_days_until_event(ev['month'], ev['day'])
+        with ev_cols[i % len(ev_cols)]:
+            st.markdown(f"""
+            <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; text-align: center;">
+                <div style="font-size: 12px; color: #94A3B8; font-weight: 700;">{ev['name']}</div>
+                <div style="font-size: 22px; font-weight: 800; color: #38BDF8; margin-top: 4px;">{days_rem} days</div>
+                <div style="font-size: 11px; color: #64748B;">({ev['date_str']})</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+    st.markdown("<br>", unsafe_allow_html=True)
+    selected_event_name = st.selectbox("Select Campaign Event", [e['name'] for e in all_events])
+    event_info = next(e for e in all_events if e['name'] == selected_event_name)
+    
     camp_msg_template = st.text_area("Campaign Message Template", value=event_info['default_message'], height=120)
     
     if st.button(f"📢 Broadcast '{event_info['name']}' Message to All Donors"):
@@ -582,6 +641,26 @@ with tab3:
                 "status": "Prepared Link",
                 "detail": "Campaign URL Generated"
             })
+            
+    with st.expander("➕ Add Custom Awareness Campaign"):
+        with st.form("custom_campaign_form"):
+            c_name = st.text_input("Campaign Name (e.g. District College Blood Drive)")
+            c_month = st.number_input("Month (1-12)", min_value=1, max_value=12, value=10)
+            c_day = st.number_input("Day (1-31)", min_value=1, max_value=31, value=15)
+            c_template = st.text_area("Default Campaign Message", value="📢 Dear {name}, join our upcoming Red Cross Blood Drive! Your donation matters.")
+            
+            if st.form_submit_button("Save Campaign"):
+                if c_name:
+                    st.session_state['custom_events'].append({
+                        "id": c_name.lower().replace(" ", "_"),
+                        "name": c_name,
+                        "date_str": f"Month {c_month}, Day {c_day}",
+                        "month": int(c_month),
+                        "day": int(c_day),
+                        "default_message": c_template
+                    })
+                    st.success(f"Added custom campaign '{c_name}'!")
+                    st.rerun()
 
 # ==================== TAB 4: NEO4J & LOGS ====================
 with tab4:
@@ -601,7 +680,7 @@ with tab4:
                 st.success(f"Synced {synced} donor nodes to Neo4j!")
         else:
             st.warning("🔴 Neo4j Disconnected. Enter credentials in sidebar to connect.")
-            st.info("When Neo4j is disconnected, all additions & edits automatically persist to the Excel sheet.")
+            st.info("When Neo4j is disconnected, all additions, edits, & deletions automatically persist to the Excel sheet.")
 
     with col_n2:
         st.markdown("#### 📜 Messaging Logs")
