@@ -1,7 +1,7 @@
 """
 Sequential 1-by-1 WhatsApp Auto-Send Engine for RED CROSS WEST GODAVARI.
-Guarantees ONLY 1 active WhatsApp Web tab at a time, auto-types the message,
-auto-presses ENTER to send, closes the tab, and proceeds to the next donor sequentially!
+Focuses WhatsApp Web chat input box using screen-space targeting,
+auto-presses ENTER key to send, closes the tab, and proceeds to the next donor sequentially!
 """
 
 import time
@@ -9,24 +9,23 @@ import urllib.parse
 import webbrowser
 import logging
 import pyautogui
-import os
 import sys
 
 logging.basicConfig(level=logging.INFO)
 
-def send_sequential_emergency_whatsapp(donors_list: list, delay_between_donors: int = 12) -> dict:
+def send_sequential_emergency_whatsapp(donors_list: list) -> dict:
     """
-    Process emergency donors strictly 1-by-1 to prevent WhatsApp Web multi-tab conflict.
-    Autosends each message by auto-pressing the ENTER key!
+    Process emergency donors strictly 1-by-1.
+    Focuses the WhatsApp Web input box, auto-presses ENTER to send, and closes the tab cleanly.
     """
     if not donors_list:
         return {"status": "error", "message": "No donors provided for dispatch"}
 
     results = []
-    
-    # Configure PyAutoGUI failsafe & pause
     pyautogui.FAILSAFE = False
-    pyautogui.PAUSE = 0.5
+    pyautogui.PAUSE = 0.3
+
+    screen_w, screen_h = pyautogui.size()
 
     for idx, donor in enumerate(donors_list):
         phone_raw = donor.get('phone', '')
@@ -40,29 +39,38 @@ def send_sequential_emergency_whatsapp(donors_list: list, delay_between_donors: 
         encoded_msg = urllib.parse.quote(msg)
         wa_url = f"https://web.whatsapp.com/send?phone={digits}&text={encoded_msg}"
         
-        logging.info(f"[{idx+1}/{len(donors_list)}] Dispatching to {name} ({digits})...")
+        logging.info(f"[{idx+1}/{len(donors_list)}] Opening WhatsApp Web for {name} ({digits})...")
         
         # 1. Open WhatsApp Web for THIS single donor
         webbrowser.open(wa_url)
         
-        # 2. Wait for WhatsApp Web to load chat input (10 seconds for initial web socket load)
-        wait_seconds = 12 if idx == 0 else 8
+        # 2. Wait for WhatsApp Web socket and chat input to finish rendering
+        wait_seconds = 14 if idx == 0 else 10
         time.sleep(wait_seconds)
         
-        # 3. Auto-press ENTER key to send the pre-filled message!
-        pyautogui.press('enter')
-        logging.info(f"[{idx+1}/{len(donors_list)}] Auto-pressed ENTER key to send message to {name}!")
+        # 3. Focus the WhatsApp Web chat input box by clicking at the lower-center of the screen
+        input_x = int(screen_w * 0.55)
+        input_y = int(screen_h * 0.93)
+        pyautogui.click(input_x, input_y)
+        time.sleep(0.5)
         
-        # 4. Wait 3 seconds for message delivery transmission
+        # 4. Auto-press ENTER and Return key to send the pre-filled message!
+        pyautogui.press('enter')
+        time.sleep(0.4)
+        pyautogui.press('return')
+        
+        logging.info(f"[{idx+1}/{len(donors_list)}] Focused & Auto-pressed ENTER key to send message to {name}!")
+        
+        # 5. Wait 3 seconds for WhatsApp Web to transmit message over websocket
         time.sleep(3)
         
-        # 5. Cleanly close the active tab using macOS Cmd+W hotkey so ONLY 1 tab is ever open!
+        # 6. Cleanly close active browser tab (Cmd+W on macOS, Ctrl+W on Windows/Linux)
         if sys.platform == 'darwin':
             pyautogui.hotkey('command', 'w')
         else:
             pyautogui.hotkey('ctrl', 'w')
             
-        time.sleep(1)
+        time.sleep(1.5)
         
         results.append({
             "name": name,
