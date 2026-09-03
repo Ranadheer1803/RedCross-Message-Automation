@@ -1,6 +1,17 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+
+# Node.js & whatsapp-web.js
+node_modules/
+whatsapp-service/node_modules/
+whatsapp-service/.wwebjs_auth/
+.wwebjs_auth/
+.wwebjs_cache/
+
+# OS & IDE
 .DS_Store
-*.log
-sample_donors.xlsx
+.vscode/
+.idea/
