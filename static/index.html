@@ -62,60 +62,50 @@
 
         <!-- Tabs Navigation -->
         <div class="rc-tabs">
-            <button class="rc-tab-btn active" onclick="switchTab('tab-registry')">📊 Donor Registry</button>
+            <button class="rc-tab-btn active" onclick="switchTab('tab-registry')">🔍 Search & Add Member</button>
             <button class="rc-tab-btn" onclick="switchTab('tab-emergency')">🚨 Emergency Request</button>
             <button class="rc-tab-btn" onclick="switchTab('tab-campaigns')">🎂 Birthdays & Campaigns</button>
             <button class="rc-tab-btn" onclick="switchTab('tab-neo4j')">🌐 Neo4j Graph & Settings</button>
         </div>
 
-        <!-- TAB 1: DONOR REGISTRY -->
+        <!-- TAB 1: DONOR REGISTRY & SEARCH -->
         <section id="tab-registry" class="rc-tab-content active">
-            <div class="rc-toolbar">
-                <div class="rc-toolbar-left">
-                    <input type="text" id="search-input" placeholder="🔍 Search Donor Name, Phone, or City..." class="rc-input" onkeyup="loadDonors()">
-                    <select id="filter-bg" class="rc-select" onchange="loadDonors()">
-                        <option value="ALL">All Blood Groups</option>
-                        <option value="A+">A+</option>
-                        <option value="A-">A-</option>
-                        <option value="B+">B+</option>
-                        <option value="B-">B-</option>
-                        <option value="O+">O+</option>
-                        <option value="O-">O-</option>
-                        <option value="AB+">AB+</option>
-                        <option value="AB-">AB-</option>
-                    </select>
-                    <select id="filter-eligibility" class="rc-select" onchange="loadDonors()">
-                        <option value="ALL">All Donors</option>
-                        <option value="ELIGIBLE">Eligible Only (≥90 Days)</option>
-                        <option value="INELIGIBLE">Recently Donated (&lt;90 Days)</option>
-                    </select>
-                </div>
-                <div class="rc-toolbar-right">
-                    <button class="rc-btn rc-btn-red" onclick="openAddModal()">➕ Add First / New Member</button>
-                    <a href="/api/excel/download" class="rc-btn rc-btn-outline">📥 Download Excel Sheet</a>
+            <div class="rc-card" style="margin-bottom: 24px;">
+                <h3>🔍 Search Donor Registry</h3>
+                <p class="text-muted">Enter a name, phone number, or city below to search matching donor members.</p>
+                <div class="rc-toolbar">
+                    <div class="rc-toolbar-left">
+                        <input type="text" id="search-input" placeholder="🔍 Enter Name, Phone, or City..." class="rc-input" style="flex: 2;" oninput="loadDonors()">
+                        <select id="filter-bg" class="rc-select" onchange="loadDonors()">
+                            <option value="ALL">All Blood Groups</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                        </select>
+                        <select id="filter-eligibility" class="rc-select" onchange="loadDonors()">
+                            <option value="ALL">All Statuses</option>
+                            <option value="ELIGIBLE">Eligible Only (≥90 Days)</option>
+                            <option value="INELIGIBLE">Recently Donated (&lt;90 Days)</option>
+                        </select>
+                    </div>
+                    <div class="rc-toolbar-right">
+                        <button class="rc-btn rc-btn-red" onclick="openAddModal()">➕ Add New Member</button>
+                        <a href="/api/excel/download" class="rc-btn rc-btn-outline">📥 Download Excel Sheet</a>
+                    </div>
                 </div>
             </div>
 
-            <!-- Registry Table View -->
-            <div class="rc-table-container">
-                <table class="rc-table">
-                    <thead>
-                        <tr>
-                            <th>Full Name</th>
-                            <th>Mobile Number</th>
-                            <th>Blood Group</th>
-                            <th>Age</th>
-                            <th>Date of Birth</th>
-                            <th>Last Donation</th>
-                            <th>Eligibility Status</th>
-                            <th>Location</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="donors-table-body">
-                        <!-- Rendered by JS -->
-                    </tbody>
-                </table>
+            <!-- Search Results Container (Cards View) -->
+            <div id="search-results-title" class="rc-section-title" style="display: none;">
+                <h3>Search Results</h3>
+            </div>
+            <div id="donors-cards-container">
+                <!-- Rendered dynamically by JS -->
             </div>
         </section>
 
@@ -234,7 +224,7 @@ Red Cross West Godavari.</textarea>
 
     </main>
 
-    <!-- Modal Form for Adding/Editing Donors -->
+    <!-- Modal Form for Adding/Editing Donors with Year/Month/Day Selector -->
     <div class="rc-modal-overlay" id="donor-modal">
         <div class="rc-modal">
             <div class="rc-modal-header">
@@ -265,14 +255,27 @@ Red Cross West Godavari.</textarea>
                             <option value="AB-">AB-</option>
                         </select>
                     </div>
+
+                    <!-- Instant Year / Month / Day Selector for Date of Birth -->
                     <div class="form-group">
-                        <label>Date of Birth</label>
-                        <input type="date" id="form-dob" class="rc-input">
+                        <label>Date of Birth (Instant Year Selector)</label>
+                        <div class="rc-date-selector-row">
+                            <select id="dob-year" class="rc-select" style="flex: 1;"></select>
+                            <select id="dob-month" class="rc-select" style="flex: 1.5;"></select>
+                            <select id="dob-day" class="rc-select" style="flex: 1;"></select>
+                        </div>
                     </div>
+
+                    <!-- Instant Year / Month / Day Selector for Last Donation Date -->
                     <div class="form-group">
-                        <label>Last Donation Date</label>
-                        <input type="date" id="form-last-donation" class="rc-input">
+                        <label>Last Donation Date (Instant Year Selector)</label>
+                        <div class="rc-date-selector-row">
+                            <select id="last-year" class="rc-select" style="flex: 1;"></select>
+                            <select id="last-month" class="rc-select" style="flex: 1.5;"></select>
+                            <select id="last-day" class="rc-select" style="flex: 1;"></select>
+                        </div>
                     </div>
+
                     <div class="form-group">
                         <label>Location / City</label>
                         <input type="text" id="form-location" value="Eluru, West Godavari" class="rc-input">

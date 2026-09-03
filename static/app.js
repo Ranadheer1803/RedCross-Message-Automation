@@ -1,11 +1,61 @@
 // RED CROSS WEST GODAVARI - Frontend Application JavaScript
 
 document.addEventListener("DOMContentLoaded", () => {
+    initDateDropdowns();
     loadStats();
     loadDonors();
     loadEvents();
     loadBirthdays();
 });
+
+// Initialize Instant Year / Month / Day Dropdowns
+function initDateDropdowns() {
+    const currentYear = new Date().getFullYear();
+    
+    // Years (Current year down to 1940)
+    const dobYearSelect = document.getElementById('dob-year');
+    const lastYearSelect = document.getElementById('last-year');
+    dobYearSelect.innerHTML = '<option value="">Year</option>';
+    lastYearSelect.innerHTML = '<option value="">Year</option>';
+    
+    for (let y = currentYear; y >= 1940; y--) {
+        const opt1 = new Option(y, y);
+        const opt2 = new Option(y, y);
+        dobYearSelect.add(opt1);
+        lastYearSelect.add(opt2);
+    }
+    dobYearSelect.value = 1998;
+    lastYearSelect.value = currentYear;
+
+    // Months (Jan - Dec)
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const dobMonthSelect = document.getElementById('dob-month');
+    const lastMonthSelect = document.getElementById('last-month');
+    dobMonthSelect.innerHTML = '<option value="">Month</option>';
+    lastMonthSelect.innerHTML = '<option value="">Month</option>';
+    
+    months.forEach((m, idx) => {
+        const val = String(idx + 1).padStart(2, '0');
+        dobMonthSelect.add(new Option(m, val));
+        lastMonthSelect.add(new Option(m, val));
+    });
+    dobMonthSelect.value = "05";
+    lastMonthSelect.value = "01";
+
+    // Days (1 - 31)
+    const dobDaySelect = document.getElementById('dob-day');
+    const lastDaySelect = document.getElementById('last-day');
+    dobDaySelect.innerHTML = '<option value="">Day</option>';
+    lastDaySelect.innerHTML = '<option value="">Day</option>';
+    
+    for (let d = 1; d <= 31; d++) {
+        const val = String(d).padStart(2, '0');
+        dobDaySelect.add(new Option(d, val));
+        lastDaySelect.add(new Option(d, val));
+    }
+    dobDaySelect.value = "15";
+    lastDaySelect.value = "10";
+}
 
 // Tab Switching Logic
 function switchTab(tabId) {
@@ -31,7 +81,6 @@ async function loadStats() {
         document.getElementById('metric-birthdays').innerText = data.birthdays_today;
         document.getElementById('metric-neo4j').innerText = data.neo4j.person_count || 0;
 
-        // Render Blood Group Inventory Chips
         const bgGrid = document.getElementById('bg-inventory-grid');
         bgGrid.innerHTML = '';
         const allGroups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
@@ -50,61 +99,90 @@ async function loadStats() {
     }
 }
 
-// Load Donors Table
+// Search & Load Donors (Only displays when search or filter is active!)
 async function loadDonors() {
-    const search = document.getElementById('search-input').value;
+    const search = document.getElementById('search-input').value.trim();
     const bg = document.getElementById('filter-bg').value;
     const eligibility = document.getElementById('filter-eligibility').value;
+
+    const cardsContainer = document.getElementById('donors-cards-container');
+    const resultsTitle = document.getElementById('search-results-title');
+
+    // If search is completely empty and no filters selected, don't show full list clutter
+    if (!search && bg === 'ALL' && eligibility === 'ALL') {
+        resultsTitle.style.display = "none";
+        cardsContainer.innerHTML = `
+            <div class="rc-card" style="text-align: center; padding: 48px 24px;">
+                <div style="font-size: 44px; color: #D32F2F; margin-bottom: 12px;">🔍</div>
+                <h3 style="font-size: 20px; font-weight: 800;">Search Registered Donor Members</h3>
+                <p class="text-muted" style="max-width: 480px; margin: 8px auto 20px;">
+                    Enter a donor name, phone number, or city in the search bar above to query member records, or click below to register a new member.
+                </p>
+                <button class="rc-btn rc-btn-red" onclick="openAddModal()">➕ Add New Member</button>
+            </div>
+        `;
+        return;
+    }
+
+    resultsTitle.style.display = "block";
 
     const query = new URLSearchParams({ search, blood_group: bg, eligibility });
     try {
         const res = await fetch(`/api/donors?${query}`);
         const donors = await res.json();
 
-        const tbody = document.getElementById('donors-table-body');
-        tbody.innerHTML = '';
+        cardsContainer.innerHTML = '';
 
         if (!donors || donors.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="9" style="text-align: center; padding: 32px; color: #64748B;">
-                        No donors registered yet. Click <b>➕ Add First / New Member</b> above to register!
-                    </td>
-                </tr>
+            cardsContainer.innerHTML = `
+                <div class="rc-card" style="text-align: center; padding: 32px;">
+                    <p class="text-muted">No donor records matched your search query '${search}'.</p>
+                    <button class="rc-btn rc-btn-red" onclick="openAddModal()">➕ Register '${search}' as New Member</button>
+                </div>
             `;
             return;
         }
 
         donors.forEach(d => {
             const waUrl = `https://api.whatsapp.com/send?phone=${d.phone.replace(/\D/g, '')}&text=${encodeURIComponent(`Hello ${d.name}, Red Cross West Godavari Branch greeting!`)}`;
-            tbody.innerHTML += `
-                <tr>
-                    <td><b>${d.name}</b></td>
-                    <td><code>${d.phone}</code></td>
-                    <td><b style="color: #D32F2F;">${d.blood_group}</b></td>
-                    <td>${d.age || 'N/A'}</td>
-                    <td>${d.dob || '-'}</td>
-                    <td>${d.last_donation || '-'}</td>
-                    <td><span class="rc-values-pill" style="font-size: 11px;">${d.eligibility_status}</span></td>
-                    <td>${d.location || 'General'}</td>
-                    <td>
-                        <button class="rc-btn rc-btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="openEditModal('${d.phone}')">✏️ Edit</button>
-                        <button class="rc-btn rc-btn-outline" style="padding: 4px 10px; font-size: 12px; color: #D32F2F;" onclick="deleteDonor('${d.phone}', '${d.name}')">🗑️ Delete</button>
-                        <a href="${waUrl}" target="_blank" class="rc-btn rc-btn-red" style="padding: 4px 10px; font-size: 12px;">💬 WhatsApp</a>
-                    </td>
-                </tr>
+            cardsContainer.innerHTML += `
+                <div class="rc-donor-item" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 20px; font-weight: 800; color: #0F172A;">👤 ${d.name} <span style="font-size: 14px; font-weight: 600; color: #64748B;">(Age: ${d.age || 'N/A'})</span></div>
+                        <div style="font-size: 14px; color: #475569; margin-top: 4px;">
+                            🩸 Blood Group: <b style="color:#D32F2F;">${d.blood_group}</b> | 📍 Location: <b>${d.location || 'General'}</b> | ⏳ Status: <code>${d.eligibility_status || 'Eligible'}</code>
+                        </div>
+                        <div style="font-size: 13px; color: #94A3B8; margin-top: 2px;">Phone: <code>${d.phone}</code> | DOB: <b>${d.dob || '-'}</b> | Last Donation: <b>${d.last_donation || '-'}</b></div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="rc-btn rc-btn-outline" style="padding: 8px 14px; font-size: 13px;" onclick="openEditModal('${d.phone}')">✏️ Edit</button>
+                        <button class="rc-btn rc-btn-outline" style="padding: 8px 14px; font-size: 13px; color: #D32F2F;" onclick="deleteDonor('${d.phone}', '${d.name}')">🗑️ Delete</button>
+                        <a href="${waUrl}" target="_blank" class="rc-wa-button">💬 WhatsApp</a>
+                    </div>
+                </div>
             `;
         });
     } catch (e) {
-        console.error("Error loading donors:", e);
+        console.error("Error searching donors:", e);
     }
 }
 
-// Modal Form Handlers
+// Modal Form Handlers with Year/Month/Day Support
 function openAddModal() {
     document.getElementById('modal-title').innerText = "➕ Add Member Record";
     document.getElementById('donor-form').reset();
     document.getElementById('edit-original-phone').value = "";
+    
+    // Set default years
+    document.getElementById('dob-year').value = "1998";
+    document.getElementById('dob-month').value = "05";
+    document.getElementById('dob-day').value = "15";
+    
+    const currentYear = new Date().getFullYear();
+    document.getElementById('last-year').value = currentYear;
+    document.getElementById('last-month').value = "01";
+    document.getElementById('last-day').value = "10";
+    
     document.getElementById('donor-modal').classList.add('active');
 }
 
@@ -119,9 +197,24 @@ async function openEditModal(phone) {
             document.getElementById('form-name').value = d.name;
             document.getElementById('form-phone').value = d.phone;
             document.getElementById('form-bg').value = d.blood_group;
-            document.getElementById('form-dob').value = d.dob || "";
-            document.getElementById('form-last-donation').value = d.last_donation || "";
             document.getElementById('form-location').value = d.location || "Eluru, West Godavari";
+            
+            // Set DOB dropdowns if available
+            if (d.dob && d.dob.includes('-')) {
+                const parts = d.dob.split('-');
+                document.getElementById('dob-year').value = parts[0];
+                document.getElementById('dob-month').value = parts[1];
+                document.getElementById('dob-day').value = parts[2];
+            }
+            
+            // Set Last Donation dropdowns if available
+            if (d.last_donation && d.last_donation.includes('-')) {
+                const parts = d.last_donation.split('-');
+                document.getElementById('last-year').value = parts[0];
+                document.getElementById('last-month').value = parts[1];
+                document.getElementById('last-day').value = parts[2];
+            }
+
             document.getElementById('donor-modal').classList.add('active');
         }
     } catch (e) {
@@ -136,12 +229,25 @@ function closeModal() {
 async function handleFormSubmit(e) {
     e.preventDefault();
     const originalPhone = document.getElementById('edit-original-phone').value;
+    
+    // Construct DOB string YYYY-MM-DD from dropdowns
+    const dobY = document.getElementById('dob-year').value;
+    const dobM = document.getElementById('dob-month').value;
+    const dobD = document.getElementById('dob-day').value;
+    const dobStr = (dobY && dobM && dobD) ? `${dobY}-${dobM}-${dobD}` : "";
+
+    // Construct Last Donation string YYYY-MM-DD from dropdowns
+    const lastY = document.getElementById('last-year').value;
+    const lastM = document.getElementById('last-month').value;
+    const lastD = document.getElementById('last-day').value;
+    const lastStr = (lastY && lastM && lastD) ? `${lastY}-${lastM}-${lastD}` : "";
+
     const donorData = {
         name: document.getElementById('form-name').value,
         phone: document.getElementById('form-phone').value,
         blood_group: document.getElementById('form-bg').value,
-        dob: document.getElementById('form-dob').value,
-        last_donation: document.getElementById('form-last-donation').value,
+        dob: dobStr,
+        last_donation: lastStr,
         location: document.getElementById('form-location').value,
         email: ""
     };
@@ -149,14 +255,12 @@ async function handleFormSubmit(e) {
     try {
         let res;
         if (originalPhone) {
-            // Update
             res = await fetch(`/api/donors/${originalPhone}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(donorData)
             });
         } else {
-            // Create
             res = await fetch('/api/donors', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -167,6 +271,8 @@ async function handleFormSubmit(e) {
         if (res.ok) {
             closeModal();
             loadStats();
+            // Automatically focus and search for newly added/edited donor name
+            document.getElementById('search-input').value = donorData.name;
             loadDonors();
         }
     } catch (err) {

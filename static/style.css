@@ -243,7 +243,6 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 16px;
-    margin-bottom: 20px;
 }
 
 .rc-toolbar-left {
@@ -255,6 +254,12 @@ body {
 .rc-toolbar-right {
     display: flex;
     gap: 12px;
+}
+
+/* Date Selector Row */
+.rc-date-selector-row {
+    display: flex;
+    gap: 10px;
 }
 
 /* Inputs & Buttons */
@@ -313,34 +318,19 @@ body {
     color: #FFFFFF;
 }
 
-/* Table */
-.rc-table-container {
+/* Donor Cards Container */
+.rc-donor-item {
     background: var(--rc-surface);
     border: 1px solid var(--rc-border);
     border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.02);
+    padding: 22px 28px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
 }
-
-.rc-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-}
-
-.rc-table th {
-    background: #F1F5F9;
-    padding: 14px 20px;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--rc-text-muted);
-    text-transform: uppercase;
-}
-
-.rc-table td {
-    padding: 16px 20px;
-    border-top: 1px solid var(--rc-border);
-    font-size: 14px;
+.rc-donor-item:hover {
+    border-color: var(--rc-red);
+    box-shadow: 0 8px 28px rgba(211, 47, 47, 0.1);
 }
 
 /* Grid Layouts */
@@ -405,8 +395,8 @@ body {
 .rc-modal {
     background: var(--rc-surface);
     border-radius: 20px;
-    width: 540px;
-    max-width: 90%;
+    width: 580px;
+    max-width: 92%;
     padding: 32px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.15);
 }

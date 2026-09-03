@@ -86,10 +86,11 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
         return max(18, int((today - dob).days // 365.25))
     normalized_df['age'] = normalized_df['dob_dt'].apply(calc_age)
     
-    normalized_df['days_since_donation'] = (today - normalized_df['last_donation_dt']).dt.days
+    # Fill float NaNs cleanly to prevent JSON serialization crash
+    normalized_df['days_since_donation'] = (today - normalized_df['last_donation_dt']).dt.days.fillna(-1).astype(int)
     
     def calc_days_until_eligible(days_since):
-        if pd.isna(days_since) or days_since >= 90:
+        if days_since < 0 or days_since >= 90:
             return 0
         return int(90 - days_since)
         
