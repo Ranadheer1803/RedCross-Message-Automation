@@ -166,7 +166,7 @@ Red Cross West Godavari.</textarea>
                 </div>
                 <div class="rc-toolbar-right" id="request-all-container" style="display: none;">
                     <button class="rc-btn rc-btn-red" style="font-size: 15px; padding: 12px 24px;" onclick="requestAllEmergencyWhatsApp()">
-                        🚀 REQUEST ALL (BROADCAST TO EVERYONE ON WHATSAPP)
+                        🚀 1-CLICK SEND TO ALL MATCHED DONORS
                     </button>
                 </div>
             </div>
@@ -293,14 +293,24 @@ Red Cross West Godavari.</textarea>
 
     <!-- Bulk Broadcast WhatsApp Modal -->
     <div class="rc-modal-overlay" id="broadcast-modal">
-        <div class="rc-modal" style="width: 680px;">
+        <div class="rc-modal" style="width: 720px;">
             <div class="rc-modal-header">
-                <h3>🚀 Bulk WhatsApp Broadcast Dispatches</h3>
+                <h3>🚀 1-Click WhatsApp Emergency Broadcast</h3>
                 <button class="rc-modal-close" onclick="closeBroadcastModal()">×</button>
             </div>
             <div class="rc-modal-body">
-                <p class="text-muted">Click the WhatsApp buttons below to send the emergency alert message to each matched donor:</p>
-                <div id="broadcast-list" style="max-height: 380px; overflow-y: auto;">
+                <div style="background: #FFEBEE; border: 1px solid #EF5350; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 800; color: #B71C1C; font-size: 16px;">⚡ Automated 1-Click Dispatch</div>
+                        <div style="font-size: 13px; color: #7F1D1D;">Click below to launch WhatsApp Web chats for all matched donors sequentially!</div>
+                    </div>
+                    <button class="rc-btn rc-btn-red" onclick="launchAllWhatsAppTabsSequentially()" style="font-size: 15px; padding: 12px 20px;">
+                        🚀 Launch All Chats Now
+                    </button>
+                </div>
+
+                <p class="text-muted">Or send messages individually below:</p>
+                <div id="broadcast-list" style="max-height: 340px; overflow-y: auto;">
                     <!-- Rendered by JS -->
                 </div>
             </div>

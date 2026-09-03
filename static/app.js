@@ -335,7 +335,25 @@ async function matchEmergencyDonors() {
     }
 }
 
-// REQUEST ALL (Broadcast to Everyone on WhatsApp)
+// 1-Click Launch All WhatsApp Tabs Sequentially!
+function launchAllWhatsAppTabsSequentially() {
+    if (!currentEmergencyMatches || currentEmergencyMatches.length === 0) {
+        alert("No matched donors to notify.");
+        return;
+    }
+
+    let delay = 0;
+    currentEmergencyMatches.forEach((d, idx) => {
+        setTimeout(() => {
+            window.open(d.wa_url, '_blank');
+        }, delay);
+        delay += 1200; // 1.2 second pause between tabs to prevent browser popup block
+    });
+
+    alert(`🚀 Launched WhatsApp dispatches for all ${currentEmergencyMatches.length} matched donors!`);
+    closeBroadcastModal();
+}
+
 function requestAllEmergencyWhatsApp() {
     if (!currentEmergencyMatches || currentEmergencyMatches.length === 0) {
         alert("No matched donors available to notify.");
@@ -352,7 +370,7 @@ function requestAllEmergencyWhatsApp() {
                     <b>👤 ${d.name}</b> (${d.blood_group}) - <code>${d.phone}</code>
                 </div>
                 <div>
-                    <a href="${d.wa_url}" target="_blank" class="rc-wa-button" style="padding: 6px 14px; font-size: 12px;">💬 Notify on WhatsApp</a>
+                    <a href="${d.wa_url}" target="_blank" class="rc-wa-button" style="padding: 6px 14px; font-size: 12px;">💬 Send WhatsApp</a>
                 </div>
             </div>
         `;
