@@ -180,11 +180,12 @@ def delete_donor(phone: str):
     return {"status": "success", "message": f"Deleted donor with phone {phone}"}
 
 @app.get("/api/emergency")
-def match_emergency(blood_group: str, hospital: Optional[str] = "GGH Eluru", urgency: Optional[str] = "HIGH", engine: Optional[str] = "EXCEL"):
+def match_emergency(blood_group: str, hospital: Optional[str] = "GGH Eluru", urgency: Optional[str] = "HIGH", engine: Optional[str] = "AUTO"):
     clean_bg = blood_group.strip().upper()
     valid_donor_bgs = COMPATIBLE_DONORS_FOR_RECIPIENT.get(clean_bg, [clean_bg])
     
-    if engine == "NEO4J" and neo4j_mgr.connected:
+    # Automatically use Neo4j Graph Cypher Traversal if connected!
+    if neo4j_mgr.connected:
         matched = neo4j_mgr.get_compatible_donors_graph(clean_bg)
     else:
         df = load_current_df()
@@ -207,6 +208,7 @@ def match_emergency(blood_group: str, hospital: Optional[str] = "GGH Eluru", urg
     return {
         "required_blood_group": clean_bg,
         "compatible_groups": valid_donor_bgs,
+        "engine_used": "NEO4J_CYPHER" if neo4j_mgr.connected else "EXCEL_GRAPH_MATRIX",
         "count": len(matched),
         "donors": matched
     }
