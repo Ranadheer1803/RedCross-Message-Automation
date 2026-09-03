@@ -16,131 +16,169 @@ from neo4j_handler import Neo4jManager
 
 # Set Streamlit page config
 st.set_page_config(
-    page_title="Red Cross Message Automation Dashboard",
+    page_title="RED CROSS West Godavari - Blood Automation",
     page_icon="🩸",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for rich aesthetics
+# Custom Red Cross CSS Design System
 st.markdown("""
 <style>
+    /* Red Cross Modern Dark & Crimson Theme */
     .stApp {
-        background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+        background: linear-gradient(135deg, #0B0F19 0%, #1A1C29 50%, #0F111A 100%);
         color: #F8FAFC;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
     
-    .header-card {
-        background: rgba(225, 29, 72, 0.12);
-        border: 1px solid rgba(225, 29, 72, 0.3);
-        backdrop-filter: blur(12px);
-        border-radius: 16px;
-        padding: 24px 32px;
-        margin-bottom: 24px;
-        box-shadow: 0 8px 32px 0 rgba(225, 29, 72, 0.1);
+    /* Header Container */
+    .redcross-header {
+        background: linear-gradient(135deg, rgba(229, 57, 53, 0.15) 0%, rgba(198, 40, 40, 0.05) 100%);
+        border: 1px solid rgba(229, 57, 53, 0.35);
+        backdrop-filter: blur(16px);
+        border-radius: 20px;
+        padding: 28px 36px;
+        margin-bottom: 28px;
+        box-shadow: 0 12px 40px rgba(229, 57, 53, 0.12);
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 24px;
     }
     
-    .header-title {
-        font-size: 28px;
-        font-weight: 800;
-        color: #FFFFFF;
-        margin: 0;
-        letter-spacing: -0.5px;
+    .redcross-title-big {
+        font-size: 44px;
+        font-weight: 900;
+        color: #E53935;
+        letter-spacing: -1px;
+        line-height: 1.0;
+        text-shadow: 0 0 20px rgba(229, 57, 53, 0.4);
     }
     
-    .header-subtitle {
-        color: #94A3B8;
-        font-size: 14px;
-        margin-top: 4px;
-    }
-    
-    .metric-card {
-        background: rgba(30, 41, 59, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 14px;
-        padding: 18px 22px;
-        transition: all 0.3s ease;
-    }
-    
-    .metric-card:hover {
-        transform: translateY(-2px);
-        border-color: rgba(225, 29, 72, 0.4);
-    }
-    
-    .metric-label {
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-        color: #94A3B8;
-        letter-spacing: 0.5px;
-    }
-    
-    .metric-val {
-        font-size: 32px;
-        font-weight: 800;
-        color: #F8FAFC;
-        margin-top: 4px;
-    }
-
-    .blood-chip {
-        background: rgba(225, 29, 72, 0.15);
-        border: 1px solid rgba(225, 29, 72, 0.3);
-        border-radius: 10px;
-        padding: 10px 14px;
-        text-align: center;
-    }
-    .blood-chip-title {
+    .redcross-title-small {
         font-size: 16px;
         font-weight: 800;
-        color: #F43F5E;
+        color: #F8FAFC;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin-top: 4px;
     }
-    .blood-chip-val {
-        font-size: 20px;
+
+    .redcross-subtitle {
+        color: #94A3B8;
+        font-size: 13px;
+        margin-top: 6px;
+    }
+
+    /* Metric Glass Cards */
+    .rc-metric-card {
+        background: rgba(26, 28, 41, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 20px 24px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .rc-metric-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(229, 57, 53, 0.5);
+        box-shadow: 0 8px 30px rgba(229, 57, 53, 0.2);
+    }
+    
+    .rc-metric-label {
+        font-size: 12px;
         font-weight: 700;
+        text-transform: uppercase;
+        color: #94A3B8;
+        letter-spacing: 1px;
+    }
+    
+    .rc-metric-value {
+        font-size: 36px;
+        font-weight: 900;
+        color: #FFFFFF;
+        margin-top: 4px;
+    }
+
+    /* Interactive Blood Group Badges */
+    .bg-badge-card {
+        background: rgba(229, 57, 53, 0.1);
+        border: 1px solid rgba(229, 57, 53, 0.25);
+        border-radius: 14px;
+        padding: 14px;
+        text-align: center;
+        transition: all 0.2s ease;
+    }
+    .bg-badge-card:hover {
+        background: rgba(229, 57, 53, 0.25);
+        transform: scale(1.04);
+    }
+    .bg-badge-type {
+        font-size: 18px;
+        font-weight: 900;
+        color: #EF5350;
+    }
+    .bg-badge-count {
+        font-size: 22px;
+        font-weight: 800;
         color: #FFFFFF;
     }
 
-    .wa-button {
-        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-        color: white !important;
-        padding: 8px 16px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 13px;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+    /* Donor Card Container */
+    .donor-card {
+        background: rgba(30, 33, 48, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
         transition: all 0.2s ease;
     }
-    .wa-button:hover {
-        transform: scale(1.03);
-        box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+    .donor-card:hover {
+        border-color: rgba(229, 57, 53, 0.4);
+        box-shadow: 0 8px 24px rgba(229, 57, 53, 0.15);
     }
 
+    /* WhatsApp Glass Button */
+    .wa-btn {
+        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+        color: #FFFFFF !important;
+        padding: 10px 20px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 16px rgba(37, 211, 102, 0.3);
+        transition: all 0.2s ease;
+    }
+    .wa-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(37, 211, 102, 0.5);
+    }
+
+    /* Streamlit Tabs override */
     .stTabs [data-baseweb="tab-list"] {
         gap: 12px;
-        background-color: rgba(15, 23, 42, 0.6);
-        padding: 8px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        background-color: rgba(15, 17, 26, 0.8);
+        padding: 10px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .stTabs [data-baseweb="tab"] {
-        border-radius: 8px;
+        border-radius: 10px;
         color: #94A3B8;
-        font-weight: 600;
-        padding: 10px 20px;
+        font-weight: 700;
+        padding: 12px 24px;
     }
 
     .stTabs [aria-selected="true"] {
-        background-color: #E11D48 !important;
+        background: linear-gradient(135deg, #E53935 0%, #C62828 100%) !important;
         color: #FFFFFF !important;
+        box-shadow: 0 4px 16px rgba(229, 57, 53, 0.4);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -164,13 +202,14 @@ if 'custom_events' not in st.session_state:
 
 neo4j_mgr: Neo4jManager = st.session_state['neo4j']
 
-# Header Section
+# Top Header with RED CROSS WEST GODAVARI branding
 st.markdown("""
-<div class="header-card">
-    <div style="font-size: 42px;">🩸</div>
+<div class="redcross-header">
+    <div style="font-size: 56px; line-height: 1;">🩸</div>
     <div>
-        <div class="header-title">Red Cross Message Automation</div>
-        <div class="header-subtitle">Refined Blood Donor Dispatcher, Excel Sync & Neo4j Automation System</div>
+        <div class="redcross-title-big">RED CROSS</div>
+        <div class="redcross-title-small">WEST GODAVARI</div>
+        <div class="redcross-subtitle">Indian Red Cross Society — West Godavari District Branch | Smart Blood Donor Automation</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -178,7 +217,11 @@ st.markdown("""
 # Sidebar
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/red-cross.png", width=64)
-    st.header("📋 Datasheet & Persistence")
+    st.markdown("### **RED CROSS WEST GODAVARI**")
+    st.caption("District Donor Automation Console")
+    
+    st.divider()
+    st.subheader("📋 Datasheet Controls")
     
     uploaded_file = st.file_uploader("Upload Excel / CSV Datasheet", type=["xlsx", "xls", "csv"])
     if uploaded_file is not None:
@@ -200,13 +243,13 @@ with st.sidebar:
             
     st.divider()
     
-    st.subheader("💡 Export / Downloads")
+    st.subheader("💡 Export Datasheet")
     if os.path.exists(ACTIVE_EXCEL_PATH):
         with open(ACTIVE_EXCEL_PATH, "rb") as f:
             st.download_button(
                 label="📥 Download Excel Sheet (.xlsx)",
                 data=f,
-                file_name="RedCross_Current_Donors.xlsx",
+                file_name="RedCross_WestGodavari_Donors.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             
@@ -232,14 +275,14 @@ with st.sidebar:
                 
     with c_n2:
         if neo4j_mgr.connected:
-            st.markdown("🟢 **Neo4j Connected**")
+            st.markdown("🟢 **Neo4j Online**")
         else:
-            st.markdown("🔴 **Neo4j Offline** (Excel mode active)")
+            st.markdown("🔴 **Neo4j Offline**")
             
     st.divider()
-    st.subheader("⚙️ Dispatch Method")
+    st.subheader("⚙️ Messaging Method")
     dispatch_mode = st.radio(
-        "Select Messaging Engine",
+        "Select Dispatcher Engine",
         ["Direct WhatsApp Web Link (1-Click)", "Automated Browser (PyWhatKit)", "Twilio WhatsApp API"],
         index=0
     )
@@ -253,72 +296,71 @@ with st.sidebar:
 
 df = st.session_state['df']
 
-# Top Metrics Row
+# Top Interactive Metrics Row
 m1, m2, m3, m4 = st.columns(4)
 with m1:
     st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-label">Total Donors (Excel)</div>
-        <div class="metric-val">{len(df)}</div>
+    <div class="rc-metric-card">
+        <div class="rc-metric-label">Total Registered Donors</div>
+        <div class="rc-metric-value">{len(df)}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with m2:
     eligible_count = len(df[df['is_eligible'] == True]) if 'is_eligible' in df.columns else 0
     st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-label">Eligible Donors (≥90 days)</div>
-        <div class="metric-val" style="color: #4ADE80;">{eligible_count}</div>
+    <div class="rc-metric-card">
+        <div class="rc-metric-label">Eligible Donors (≥90 Days)</div>
+        <div class="rc-metric-value" style="color: #4ADE80;">{eligible_count}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with m3:
     bday_df = get_today_birthdays(df)
     st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-label">Birthdays Today</div>
-        <div class="metric-val" style="color: #FACC15;">{len(bday_df)}</div>
+    <div class="rc-metric-card">
+        <div class="rc-metric-label">Birthdays Today</div>
+        <div class="rc-metric-value" style="color: #FACC15;">{len(bday_df)}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with m4:
     n_stats = neo4j_mgr.get_neo4j_stats()
     st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-label">Neo4j Nodes</div>
-        <div class="metric-val" style="color: #38BDF8;">{n_stats['person_count']}</div>
+    <div class="rc-metric-card">
+        <div class="rc-metric-label">Neo4j Graph Nodes</div>
+        <div class="rc-metric-value" style="color: #38BDF8;">{n_stats['person_count']}</div>
     </div>
     """, unsafe_allow_html=True)
 
-# Blood Group Breakdown Cards
+# Blood Group Breakdown Grid
 st.markdown("<br>", unsafe_allow_html=True)
-st.markdown("##### 🩸 Blood Group Inventory Breakdown")
+st.markdown("##### 🩸 Blood Group Inventory Breakdown (West Godavari Branch)")
 bg_cols = st.columns(8)
 all_groups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
 for i, bg_type in enumerate(all_groups):
     count = len(df[df['blood_group'] == bg_type]) if 'blood_group' in df.columns else 0
     with bg_cols[i]:
         st.markdown(f"""
-        <div class="blood-chip">
-            <div class="blood-chip-title">{bg_type}</div>
-            <div class="blood-chip-val">{count}</div>
+        <div class="bg-badge-card">
+            <div class="bg-badge-type">{bg_type}</div>
+            <div class="bg-badge-count">{count}</div>
         </div>
         """, unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Main Tabs
+# Main Navigation Tabs
 tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Donor Registry", 
     "🚨 Emergency Request", 
     "🎂 Birthdays & Campaigns", 
-    "🌐 Neo4j & Activity Logs"
+    "🌐 Neo4j Graph & Logs"
 ])
 
 # ==================== TAB 1: DONOR REGISTRY ====================
 with tab1:
-    st.subheader("📋 Donor Registry Datasheet & Management")
-    st.info("Adding, editing, or deleting donor records automatically updates the Excel file on disk and syncs with Neo4j.")
+    st.subheader("📋 Donor Registry Datasheet & Interactive Filters")
     
     col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
@@ -350,26 +392,25 @@ with tab1:
     
     st.dataframe(filtered_df[display_cols], use_container_width=True)
     
-    # Export Options
     exp_c1, exp_c2, exp_c3 = st.columns(3)
     with exp_c1:
         csv_data = filtered_df.to_csv(index=False)
-        st.download_button("📥 Export Filtered View to CSV", csv_data, "filtered_donors.csv", "text/csv")
+        st.download_button("📥 Export Filtered View to CSV", csv_data, "west_godavari_donors.csv", "text/csv")
     with exp_c2:
         json_data = filtered_df.to_json(orient="records", indent=2)
-        st.download_button("📥 Export Filtered View to JSON", json_data, "filtered_donors.json", "application/json")
+        st.download_button("📥 Export Filtered View to JSON", json_data, "west_godavari_donors.json", "application/json")
         
     st.divider()
     col_e1, col_e2, col_e3 = st.columns(3)
     
     # --- Add New Donor Form ---
     with col_e1:
-        with st.expander("➕ Add New Donor Record", expanded=True):
+        with st.expander("➕ Add New Donor Member", expanded=True):
             with st.form("new_donor_form"):
                 n_name = st.text_input("Full Name *")
                 n_phone = st.text_input("Mobile Number *")
                 n_bg = st.selectbox("Blood Group", all_groups)
-                n_loc = st.text_input("Location / City", value="Hyderabad")
+                n_loc = st.text_input("Location / City", value="Eluru, West Godavari")
                 n_dob = st.date_input("Date of Birth", value=datetime.date(1998, 5, 15))
                 n_last = st.date_input("Last Donation Date", value=datetime.date.today() - datetime.timedelta(days=100))
                 
@@ -451,7 +492,7 @@ with tab1:
 
 # ==================== TAB 2: EMERGENCY REQUEST ====================
 with tab2:
-    st.subheader("🚨 Emergency Blood Dispatcher")
+    st.subheader("🚨 Emergency Blood Dispatcher — RED CROSS WEST GODAVARI")
     st.info("Select the required blood group. You can query matching donors using standard Excel filter or Neo4j Graph Traversal (`CAN_DONATE_TO`).")
     
     col_e1, col_e2 = st.columns([1, 2])
@@ -463,8 +504,8 @@ with tab2:
         query_engine = st.radio("Search Engine", ["Excel Datasheet Engine", "Neo4j Graph Traversal (:CAN_DONATE_TO)"])
         
         urgency_level = st.select_slider("🔥 Urgency Level", options=["NORMAL", "HIGH", "CRITICAL"])
-        hospital_name = st.text_input("🏥 Hospital / Location Name", value="Apollo Hospital, Hyderabad")
-        contact_person = st.text_input("📞 Emergency Contact Person", value="Red Cross Helpline (9876543210)")
+        hospital_name = st.text_input("🏥 Hospital / Location Name", value="Government General Hospital, Eluru")
+        contact_person = st.text_input("📞 Emergency Contact Person", value="Red Cross West Godavari (9876543210)")
         
         only_eligible = st.checkbox("Only include eligible donors (≥90 days since last donation)", value=True)
         
@@ -479,7 +520,7 @@ with tab2:
             if only_eligible:
                 match_df = match_df[match_df['is_eligible'] == True]
                 
-        st.markdown(f"**Found <span style='color:#F43F5E; font-size:20px;'>{len(match_df)}</span> donors who can donate to {clean_req_bg}**", unsafe_allow_html=True)
+        st.markdown(f"**Found <span style='color:#F43F5E; font-size:22px;'>{len(match_df)}</span> donors who can donate to {clean_req_bg}**", unsafe_allow_html=True)
 
     with col_e2:
         st.markdown("##### 📝 Message Template Editor")
@@ -500,7 +541,7 @@ with tab2:
                 st.code(sample_preview, language="text")
                 
     st.divider()
-    st.subheader("📤 Target Donors & Dispatch")
+    st.subheader("📤 Target Donors & Interactive WhatsApp Dispatcher")
     
     if match_df.empty:
         st.warning(f"No matching donors found for blood group {clean_req_bg}.")
@@ -545,13 +586,14 @@ with tab2:
                             })
                         st.success("Dispatched all messages via Twilio API!")
 
-        # Donor Table with 1-Click WhatsApp buttons
+        # Donor Cards View with 1-Click WhatsApp buttons
         for idx, donor in match_df.iterrows():
             d_name = donor['name']
             d_phone = donor['phone']
             d_bg = donor['blood_group']
             d_loc = donor['location']
             d_status = donor.get('eligibility_status', 'Eligible')
+            d_age = donor.get('age', 'N/A')
             
             donor_msg = format_message(
                 msg_template, 
@@ -560,20 +602,26 @@ with tab2:
             )
             wa_url = generate_whatsapp_web_url(d_phone, donor_msg)
             
-            c_d1, c_d2, c_d3, c_d4 = st.columns([2, 2, 2, 2])
-            with c_d1:
-                st.markdown(f"**{d_name}**")
-            with c_d2:
-                st.markdown(f"🩸 `{d_bg}` | 📍 {d_loc} | `{d_status}`")
-            with c_d3:
-                st.markdown(f"📞 `{d_phone}`")
-            with c_d4:
-                st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-button">💬 Send WhatsApp</a>', unsafe_allow_html=True)
-            st.divider()
+            st.markdown(f"""
+            <div class="donor-card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 20px; font-weight: 800; color: #FFFFFF;">👤 {d_name} <span style="font-size:14px; font-weight:600; color:#94A3B8;">(Age: {d_age})</span></div>
+                        <div style="font-size: 14px; color: #CBD5E1; margin-top: 4px;">
+                            🩸 Blood Group: <b style="color:#EF5350;">{d_bg}</b> | 📍 Location: <b>{d_loc}</b> | ⏳ Status: <code>{d_status}</code>
+                        </div>
+                        <div style="font-size: 13px; color: #64748B; margin-top: 2px;">Phone: <code>{d_phone}</code></div>
+                    </div>
+                    <div>
+                        <a href="{wa_url}" target="_blank" class="wa-btn">💬 Send WhatsApp Message</a>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
 # ==================== TAB 3: BIRTHDAYS & CAMPAIGNS ====================
 with tab3:
-    st.subheader("🎂 Birthday Celebrations & Campaign Automation")
+    st.subheader("🎂 Birthday Celebrations & Campaign Automation — RED CROSS WEST GODAVARI")
     
     bday_today_df = get_today_birthdays(df)
     bday_upcoming_df = get_upcoming_birthdays(df, days=7)
@@ -590,10 +638,12 @@ with tab3:
                 b_wa_url = generate_whatsapp_web_url(donor['phone'], b_msg)
                 
                 st.markdown(f"""
-                <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
-                    <div style="font-weight: 700; font-size: 18px; color: #FACC15;">🎈 {donor['name']}</div>
-                    <div style="font-size: 14px; color: #CBD5E1; margin: 4px 0;">Blood Group: <b>{donor['blood_group']}</b> | Phone: <code>{donor['phone']}</code></div>
-                    <a href="{b_wa_url}" target="_blank" class="wa-button" style="margin-top: 8px;">🎂 Send Birthday Wishes & Donor Reminder</a>
+                <div style="background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.35); border-radius: 16px; padding: 20px; margin-bottom: 14px;">
+                    <div style="font-weight: 800; font-size: 20px; color: #FACC15;">🎈 {donor['name']}</div>
+                    <div style="font-size: 14px; color: #E2E8F0; margin: 6px 0;">
+                        Blood Group: <b style="color:#EF5350;">{donor['blood_group']}</b> | Phone: <code>{donor['phone']}</code> | Location: <b>{donor['location']}</b>
+                    </div>
+                    <a href="{b_wa_url}" target="_blank" class="wa-btn" style="margin-top: 10px;">🎂 Send Birthday Wishes & Donor Encouragement</a>
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -610,15 +660,14 @@ with tab3:
     
     all_events = SPECIAL_EVENTS + st.session_state['custom_events']
     
-    # Event countdown badges
     ev_cols = st.columns(len(all_events))
     for i, ev in enumerate(all_events):
         days_rem = get_days_until_event(ev['month'], ev['day'])
         with ev_cols[i % len(ev_cols)]:
             st.markdown(f"""
-            <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; text-align: center;">
+            <div style="background: rgba(30, 33, 48, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px; text-align: center;">
                 <div style="font-size: 12px; color: #94A3B8; font-weight: 700;">{ev['name']}</div>
-                <div style="font-size: 22px; font-weight: 800; color: #38BDF8; margin-top: 4px;">{days_rem} days</div>
+                <div style="font-size: 24px; font-weight: 900; color: #38BDF8; margin-top: 4px;">{days_rem} days</div>
                 <div style="font-size: 11px; color: #64748B;">({ev['date_str']})</div>
             </div>
             """, unsafe_allow_html=True)
@@ -644,10 +693,10 @@ with tab3:
             
     with st.expander("➕ Add Custom Awareness Campaign"):
         with st.form("custom_campaign_form"):
-            c_name = st.text_input("Campaign Name (e.g. District College Blood Drive)")
+            c_name = st.text_input("Campaign Name (e.g. West Godavari District Blood Drive)")
             c_month = st.number_input("Month (1-12)", min_value=1, max_value=12, value=10)
             c_day = st.number_input("Day (1-31)", min_value=1, max_value=31, value=15)
-            c_template = st.text_area("Default Campaign Message", value="📢 Dear {name}, join our upcoming Red Cross Blood Drive! Your donation matters.")
+            c_template = st.text_area("Default Campaign Message", value="📢 Dear {name}, join our upcoming Red Cross West Godavari Blood Drive! Your donation matters.")
             
             if st.form_submit_button("Save Campaign"):
                 if c_name:
