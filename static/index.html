@@ -166,7 +166,7 @@ Red Cross West Godavari.</textarea>
                 </div>
                 <div class="rc-toolbar-right" id="request-all-container" style="display: none;">
                     <button class="rc-btn rc-btn-red" style="font-size: 15px; padding: 12px 24px;" onclick="requestAllEmergencyWhatsApp()">
-                        🚀 1-CLICK SEND TO ALL MATCHED DONORS
+                        🚀 1-CLICK AUTO SEND TO ALL MATCHED DONORS
                     </button>
                 </div>
             </div>
@@ -295,26 +295,21 @@ Red Cross West Godavari.</textarea>
     <div class="rc-modal-overlay" id="broadcast-modal">
         <div class="rc-modal" style="width: 740px;">
             <div class="rc-modal-header">
-                <h3>🚀 1-Click WhatsApp Emergency Broadcast</h3>
+                <h3>🚀 1-By-1 WhatsApp Auto Dispatch (Auto ENTER)</h3>
                 <button class="rc-modal-close" onclick="closeBroadcastModal()">×</button>
             </div>
             <div class="rc-modal-body">
                 <div style="background: #FFEBEE; border: 1px solid #EF5350; border-radius: 14px; padding: 20px; margin-bottom: 20px;">
-                    <div style="font-weight: 800; color: #B71C1C; font-size: 16px; margin-bottom: 6px;">⚡ Automated Message Dispatch Modes</div>
-                    <p style="font-size: 13px; color: #7F1D1D; margin-bottom: 14px;">Select your preferred 1-press dispatch mode below:</p>
+                    <div style="font-weight: 800; color: #B71C1C; font-size: 16px; margin-bottom: 6px;">⚡ Automated 1-by-1 Dispatcher</div>
+                    <p style="font-size: 13px; color: #7F1D1D; margin-bottom: 14px;">Processes each matched donor strictly 1-by-1 in a single active window. Auto-types the message, <b>automatically presses ENTER to send</b>, closes the tab, and moves to the next donor!</p>
 
-                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        <button class="rc-btn rc-btn-red" onclick="launchAllWhatsAppTabsSequentially('WEB_TAB')" style="font-size: 14px; padding: 12px 18px;">
-                            🚀 Open WhatsApp Web Chats (1-Click)
-                        </button>
-                        <button class="rc-btn rc-btn-dark" onclick="launchAllWhatsAppTabsSequentially('PYWHATKIT_AUTO_ENTER')" style="font-size: 14px; padding: 12px 18px;">
-                            ⚡ Auto Send & Press Enter Key (PyWhatKit)
-                        </button>
-                    </div>
+                    <button class="rc-btn rc-btn-red" onclick="launchAllWhatsAppTabsSequentially()" style="font-weight: 800; font-size: 15px; padding: 14px 24px; width: 100%; justify-content: center;">
+                        ⚡ LAUNCH 1-BY-1 AUTO SEND (AUTO PRESS ENTER)
+                    </button>
                 </div>
 
                 <p class="text-muted">Or send messages individually below:</p>
-                <div id="broadcast-list" style="max-height: 300px; overflow-y: auto;">
+                <div id="broadcast-list" style="max-height: 280px; overflow-y: auto;">
                     <!-- Rendered by JS -->
                 </div>
             </div>
