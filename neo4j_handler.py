@@ -69,7 +69,7 @@ class Neo4jManager:
                         MERGE (donor)-[:CAN_DONATE_TO]->(rec)
                     """, donor_bg=donor_bg, rec_bg=recipient_bg)
 
-    def clear_all_database((self)) -> bool:
+    def clear_all_database(self) -> bool:
         """Purge all Person nodes from Neo4j while retaining BloodGroup schema."""
         if not self.connected or not self.driver:
             return False
